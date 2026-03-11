@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  ExternalLink,
 } from "lucide-react";
 
 // ─── Platform Config ─────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ interface PlatformConfig {
   icon: string;
   features: string[];
   fields: PlatformField[];
+  connectMethod: "direct" | "oauth";
 }
 
 const platforms: PlatformConfig[] = [
@@ -49,6 +51,7 @@ const platforms: PlatformConfig[] = [
     color: "#1877F2",
     icon: "M",
     features: ["Ad Accounts", "Campaign Insights", "Conversion Tracking", "Page Analytics"],
+    connectMethod: "direct",
     fields: [
       {
         key: "accessToken",
@@ -75,6 +78,7 @@ const platforms: PlatformConfig[] = [
     color: "#4285F4",
     icon: "G",
     features: ["Search Campaigns", "Shopping Ads", "Performance Max", "Display Network"],
+    connectMethod: "direct",
     fields: [
       {
         key: "developerToken",
@@ -118,10 +122,11 @@ const platforms: PlatformConfig[] = [
     name: "Shopify",
     subtitle: "E-commerce Store",
     description:
-      "Enter your Shopify app credentials from the Partners dashboard. The app must already be installed on the client's store.",
+      "Enter your Shopify app credentials from the Partners dashboard. We'll connect to the store via OAuth to get the access token automatically.",
     color: "#96BF48",
     icon: "S",
     features: ["Order Data", "Revenue Tracking", "Product Analytics", "Customer Insights"],
+    connectMethod: "oauth",
     fields: [
       {
         key: "storeUrl",
@@ -144,13 +149,6 @@ const platforms: PlatformConfig[] = [
         secret: true,
         helpText: "Found in Shopify Partners → Your App → Settings → Credentials.",
       },
-      {
-        key: "accessToken",
-        label: "Admin API Access Token",
-        placeholder: "shpat_xxxxxxxxxxxxxxxx",
-        secret: true,
-        helpText: "Generated when the app was installed. Found in Partners → Your App → API credentials.",
-      },
     ],
   },
 ];
@@ -168,6 +166,57 @@ export default function IntegrationsPage() {
   const [verifying, setVerifying] = useState<string | null>(null);
   const [error, setError] = useState<{ message: string; platform: string } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // ─── Handle Shopify OAuth callback (from URL fragment) ───────────────────
+  const handleOAuthResult = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const hash = window.location.hash;
+    if (!hash.includes("oauth_result=")) return;
+
+    try {
+      const encoded = hash.split("oauth_result=")[1];
+      const payload = JSON.parse(decodeURIComponent(encoded));
+
+      if (payload.platform === "shopify" && payload.accessToken && activeClientSpace) {
+        updateClientSpace(activeClientSpace.id, {
+          shopifyCredentials: {
+            storeUrl: payload.storeUrl,
+            accessToken: payload.accessToken,
+            clientId: payload.clientId,
+            clientSecret: payload.clientSecret,
+          },
+          connectedChannels: [
+            ...activeClientSpace.connectedChannels.filter((c) => c !== "shopify"),
+            "shopify",
+          ],
+        });
+        setSuccess("shopify");
+      }
+    } catch {
+      setError({ message: "Failed to process OAuth response.", platform: "shopify" });
+    }
+
+    // Clear the hash
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [activeClientSpace, updateClientSpace]);
+
+  // Check for OAuth callback on mount and URL changes
+  useEffect(() => {
+    handleOAuthResult();
+  }, [handleOAuthResult]);
+
+  // Check for error query params (from failed OAuth)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const errorMsg = params.get("error");
+    const platform = params.get("platform");
+    if (errorMsg && platform) {
+      setError({ message: errorMsg, platform });
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const isConnected = (platform: string) => {
     return activeClientSpace?.connectedChannels.includes(platform as "meta" | "google" | "shopify");
@@ -194,7 +243,7 @@ export default function IntegrationsPage() {
     return platform.fields.every((f) => getFieldValue(platformKey, f.key).trim() !== "");
   };
 
-  // Test connection by calling the verify endpoint
+  // Test connection by calling the verify endpoint (Meta & Google only)
   const handleTestConnection = async (platformKey: string) => {
     if (!isFormComplete(platformKey)) return;
     setVerifying(platformKey);
@@ -222,14 +271,6 @@ export default function IntegrationsPage() {
             clientSecret: fields.clientSecret,
             refreshToken: fields.refreshToken,
             customerId: fields.customerId.replace(/-/g, ""),
-          },
-        };
-      } else if (platformKey === "shopify") {
-        body = {
-          action: "verify_shopify",
-          shopifyCredentials: {
-            storeUrl: fields.storeUrl.replace(/^https?:\/\//, "").replace(/\/$/, ""),
-            accessToken: fields.accessToken,
           },
         };
       }
@@ -260,7 +301,7 @@ export default function IntegrationsPage() {
     }
   };
 
-  // Save credentials to workspace
+  // Save credentials to workspace (Meta & Google direct save)
   const handleSave = async (platformKey: string) => {
     if (!activeClientSpace || !isFormComplete(platformKey)) return;
     setSaving(platformKey);
@@ -293,25 +334,30 @@ export default function IntegrationsPage() {
           "google",
         ],
       });
-    } else if (platformKey === "shopify") {
-      updateClientSpace(activeClientSpace.id, {
-        shopifyCredentials: {
-          storeUrl: fields.storeUrl.replace(/^https?:\/\//, "").replace(/\/$/, ""),
-          accessToken: fields.accessToken,
-          clientId: fields.clientId,
-          clientSecret: fields.clientSecret,
-        },
-        connectedChannels: [
-          ...activeClientSpace.connectedChannels.filter((c) => c !== "shopify"),
-          "shopify",
-        ],
-      });
     }
 
     setSaving(null);
     setExpandedPlatform(null);
     setSuccess(null);
     setFormData((prev) => ({ ...prev, [platformKey]: {} }));
+  };
+
+  // Shopify: Initiate OAuth flow to get access token automatically
+  const handleShopifyInstall = () => {
+    const fields = formData["shopify"] || {};
+    const storeUrl = fields.storeUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const clientId = fields.clientId;
+    const clientSecret = fields.clientSecret;
+
+    if (!storeUrl || !clientId || !clientSecret) return;
+
+    const params = new URLSearchParams({
+      shop: storeUrl,
+      client_id: clientId,
+      client_secret: clientSecret,
+    });
+
+    window.location.href = `/api/auth/shopify?${params.toString()}`;
   };
 
   // Disconnect handler
@@ -342,7 +388,7 @@ export default function IntegrationsPage() {
               Integrations
             </h1>
             <p className="text-gray-500 mt-1 ml-[52px]">
-              Enter your API credentials to connect your ad platforms and stores.
+              Connect your ad platforms and stores to pull performance data.
             </p>
           </div>
 
@@ -373,6 +419,24 @@ export default function IntegrationsPage() {
                 </div>
               </div>
               <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Shopify OAuth success banner */}
+          {success === "shopify" && isConnected("shopify") && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-800">Shopify connected successfully!</p>
+                  <p className="text-sm text-green-600 mt-1">
+                    Store: {activeClientSpace?.shopifyCredentials?.storeUrl}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -522,8 +586,8 @@ export default function IntegrationsPage() {
                           })}
                         </div>
 
-                        {/* Success message */}
-                        {success === platform.key && (
+                        {/* Success message (for direct-save platforms) */}
+                        {success === platform.key && platform.connectMethod === "direct" && (
                           <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
                             <CheckCircle2 className="w-4 h-4 text-green-600" />
                             <p className="text-sm text-green-700 font-medium">
@@ -534,36 +598,57 @@ export default function IntegrationsPage() {
 
                         {/* Action buttons */}
                         <div className="flex items-center gap-3 mt-5">
-                          <button
-                            onClick={() => handleTestConnection(platform.key)}
-                            disabled={!isFormComplete(platform.key) || verifying === platform.key}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                          >
-                            {verifying === platform.key ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <ShieldCheck className="w-4 h-4" />
-                            )}
-                            Test Connection
-                          </button>
+                          {platform.connectMethod === "direct" ? (
+                            <>
+                              {/* Meta & Google: Test + Save */}
+                              <button
+                                onClick={() => handleTestConnection(platform.key)}
+                                disabled={!isFormComplete(platform.key) || verifying === platform.key}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                              >
+                                {verifying === platform.key ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <ShieldCheck className="w-4 h-4" />
+                                )}
+                                Test Connection
+                              </button>
 
-                          <button
-                            onClick={() => handleSave(platform.key)}
-                            disabled={
-                              !isFormComplete(platform.key) ||
-                              saving === platform.key ||
-                              !activeClientSpace
-                            }
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-all hover:shadow-md"
-                            style={{ backgroundColor: platform.color }}
-                          >
-                            {saving === platform.key ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="w-4 h-4" />
-                            )}
-                            Save & Connect
-                          </button>
+                              <button
+                                onClick={() => handleSave(platform.key)}
+                                disabled={
+                                  !isFormComplete(platform.key) ||
+                                  saving === platform.key ||
+                                  !activeClientSpace
+                                }
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-all hover:shadow-md"
+                                style={{ backgroundColor: platform.color }}
+                              >
+                                {saving === platform.key ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="w-4 h-4" />
+                                )}
+                                Save & Connect
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {/* Shopify: OAuth — get token automatically */}
+                              <button
+                                onClick={handleShopifyInstall}
+                                disabled={!isFormComplete(platform.key) || !activeClientSpace}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-all hover:shadow-md"
+                                style={{ backgroundColor: platform.color }}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                Connect to Shopify
+                              </button>
+                              <p className="text-xs text-gray-400">
+                                You&apos;ll be redirected to Shopify to authorize. The access token is obtained automatically.
+                              </p>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -581,17 +666,17 @@ export default function IntegrationsPage() {
                 {
                   step: "1",
                   title: "Get Credentials",
-                  desc: "Get API keys from each platform's developer or partner settings",
+                  desc: "Get API keys from Meta/Google, or Client ID & Secret from Shopify Partners",
                 },
                 {
                   step: "2",
-                  title: "Enter & Test",
-                  desc: "Paste your credentials and verify they work with the Test Connection button",
+                  title: "Enter & Connect",
+                  desc: "Paste credentials above. For Shopify, we handle the token exchange via OAuth automatically.",
                 },
                 {
                   step: "3",
-                  title: "Save & Pull Data",
-                  desc: "Save your credentials and your dashboard will start showing real data",
+                  title: "Pull Data",
+                  desc: "Your dashboard will start showing real campaign and revenue data.",
                 },
               ].map((item) => (
                 <div key={item.step} className="text-center">
@@ -609,8 +694,8 @@ export default function IntegrationsPage() {
           <div className="mt-4 flex items-start gap-2 px-2">
             <ShieldCheck className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
             <p className="text-xs text-gray-400">
-              Credentials are stored locally in your browser and sent directly to platform APIs via our server.
-              They are never shared with third parties.
+              Credentials are stored locally in your browser. Shopify tokens are obtained via secure OAuth.
+              Nothing is shared with third parties.
             </p>
           </div>
         </div>
