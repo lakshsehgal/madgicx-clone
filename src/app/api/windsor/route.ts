@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateDemoData } from "@/lib/windsor";
-import { fetchMetaData, verifyMetaCredentials } from "@/lib/meta-api";
+import { fetchMetaData, fetchMetaAdData, verifyMetaCredentials } from "@/lib/meta-api";
 import { fetchGoogleAdsData, verifyGoogleAdsCredentials } from "@/lib/google-ads-api";
 import { fetchShopifyData, verifyShopifyCredentials } from "@/lib/shopify-api";
 import {
@@ -11,6 +11,7 @@ import {
   ChannelPerformance,
   DailyPerformance,
   CampaignRow,
+  AdRow,
   ShopifyDetails,
 } from "@/types";
 
@@ -68,15 +69,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const [metaResult, googleResult, shopifyResult] = await Promise.allSettled([
+    const [metaResult, googleResult, shopifyResult, metaAdsResult] = await Promise.allSettled([
       metaCredentials ? fetchMetaData(metaCredentials, start, end) : Promise.resolve(null),
       googleCredentials ? fetchGoogleAdsData(googleCredentials, start, end) : Promise.resolve(null),
       shopifyCredentials ? fetchShopifyData(shopifyCredentials, start, end) : Promise.resolve(null),
+      metaCredentials ? fetchMetaAdData(metaCredentials, start, end) : Promise.resolve(null),
     ]);
 
     const meta = metaResult.status === "fulfilled" ? metaResult.value : null;
     const google = googleResult.status === "fulfilled" ? googleResult.value : null;
     const shopify = shopifyResult.status === "fulfilled" ? shopifyResult.value : null;
+    const metaAds: AdRow[] | null = metaAdsResult.status === "fulfilled" ? metaAdsResult.value : null;
 
     const errors: string[] = [];
     if (metaCredentials && metaResult.status === "rejected") {
@@ -226,6 +229,7 @@ export async function POST(request: NextRequest) {
       channelBreakdown,
       dailyPerformance,
       campaigns,
+      metaAds: metaAds || [],
       shopifyDetails,
       errors: errors.length > 0 ? errors : undefined,
     });

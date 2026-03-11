@@ -14,6 +14,7 @@ import {
   ChannelPerformance,
   DailyPerformance,
   CampaignRow,
+  AdRow,
   DateRange,
   ShopifyDetails,
 } from "@/types";
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [dailyPerformance, setDailyPerformance] = useState<DailyPerformance[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [shopifyDetails, setShopifyDetails] = useState<ShopifyDetails | undefined>();
+  const [metaAds, setMetaAds] = useState<AdRow[]>([]);
   const [isDemoData, setIsDemoData] = useState(false);
   const [apiErrors, setApiErrors] = useState<string[]>([]);
 
@@ -51,6 +53,7 @@ export default function DashboardPage() {
         setChannelBreakdown(d.channelBreakdown || []);
         setDailyPerformance(d.dailyPerformance || []);
         setCampaigns(d.campaigns || []);
+        setMetaAds(d.metaAds || []);
         setShopifyDetails(d.shopifyDetails);
         setIsDemoData(!!d.demo);
       }
@@ -59,7 +62,13 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     if (!activeClientSpace) return;
-    setLoading(true);
+
+    // If we already have cached data for this key, skip the loading spinner (stale-while-revalidate)
+    let hasCached = false;
+    try { hasCached = !!sessionStorage.getItem(cacheKey); } catch { /* ignore */ }
+    if (!hasCached) {
+      setLoading(true);
+    }
     setApiErrors([]);
     try {
       const hasCredentials =
@@ -93,6 +102,7 @@ export default function DashboardPage() {
       setChannelBreakdown(data.channelBreakdown || []);
       setDailyPerformance(data.dailyPerformance || []);
       setCampaigns(data.campaigns || []);
+      setMetaAds(data.metaAds || []);
       setShopifyDetails(data.shopifyDetails);
       setIsDemoData(!!data.demo);
       if (data.errors) setApiErrors(data.errors);
@@ -217,6 +227,7 @@ export default function DashboardPage() {
           <MetaMetrics
             channelData={metaChannel}
             campaigns={campaigns}
+            metaAds={metaAds}
             dailyPerformance={dailyPerformance}
             loading={loading}
             accountId={activeClientSpace?.metaCredentials?.adAccountId}

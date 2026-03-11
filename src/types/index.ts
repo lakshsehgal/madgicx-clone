@@ -85,6 +85,21 @@ export interface CampaignRow {
   conversions: number;
 }
 
+export interface AdRow {
+  id: string;
+  name: string;
+  campaignName: string;
+  spend: number;
+  revenue: number;
+  roas: number;
+  impressions: number;
+  clicks: number;
+  cpc: number;
+  ctr: number;
+  conversions: number;
+  thumbnailUrl?: string;
+}
+
 export interface DateRange {
   from: Date;
   to: Date;

@@ -1,4 +1,4 @@
-import { MetaCredentials, CampaignRow } from "@/types";
+import { MetaCredentials, CampaignRow, AdRow } from "@/types";
 import { format } from "date-fns";
 
 const META_GRAPH_URL = "https://graph.facebook.com/v21.0";
@@ -175,6 +175,106 @@ export async function fetchMetaData(
     dailyData,
     campaigns,
   };
+}
+
+// Fetch ad-level insights for Creative Analytics
+interface MetaAdInsightRow {
+  ad_name: string;
+  ad_id: string;
+  campaign_name: string;
+  spend: string;
+  impressions: string;
+  clicks: string;
+  actions?: { action_type: string; value: string }[];
+  action_values?: { action_type: string; value: string }[];
+}
+
+export async function fetchMetaAdData(
+  credentials: MetaCredentials,
+  startDate: Date,
+  endDate: Date
+): Promise<AdRow[]> {
+  const { accessToken, adAccountId } = credentials;
+  const accountId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+
+  const fields = "ad_name,ad_id,campaign_name,spend,impressions,clicks,actions,action_values";
+  const timeRange = JSON.stringify({
+    since: format(startDate, "yyyy-MM-dd"),
+    until: format(endDate, "yyyy-MM-dd"),
+  });
+
+  const params = new URLSearchParams({
+    access_token: accessToken,
+    fields,
+    time_range: timeRange,
+    level: "ad",
+    limit: "200",
+    filtering: JSON.stringify([{ field: "spend", operator: "GREATER_THAN", value: "0" }]),
+  });
+
+  const url = `${META_GRAPH_URL}/${accountId}/insights?${params.toString()}`;
+  let allRows: MetaAdInsightRow[] = [];
+
+  // Fetch up to 2 pages (400 ads max — enough for creative analytics)
+  let nextUrl: string | null = url;
+  let pageCount = 0;
+  while (nextUrl && pageCount < 2) {
+    pageCount++;
+    const response = await fetch(nextUrl);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(
+        `Meta Ads API error ${response.status}: ${JSON.stringify(error?.error?.message || error)}`
+      );
+    }
+    const data: { data: MetaAdInsightRow[]; paging?: { next?: string } } = await response.json();
+    allRows = allRows.concat(data.data || []);
+    nextUrl = data.paging?.next || null;
+  }
+
+  // Aggregate by ad_id (since we're not using daily breakdown here)
+  const adMap = new Map<string, AdRow>();
+
+  for (const row of allRows) {
+    const spend = Number(row.spend) || 0;
+    const impressions = Number(row.impressions) || 0;
+    const clicks = Number(row.clicks) || 0;
+    const conversions = extractConversions(row.actions);
+    const revenue = extractRevenue(row.action_values);
+
+    const adKey = row.ad_id || row.ad_name;
+    const existing = adMap.get(adKey);
+    if (existing) {
+      existing.spend += spend;
+      existing.revenue += revenue;
+      existing.impressions += impressions;
+      existing.clicks += clicks;
+      existing.conversions += conversions;
+    } else {
+      adMap.set(adKey, {
+        id: `ad-${adKey}`,
+        name: row.ad_name || "Unknown Ad",
+        campaignName: row.campaign_name || "Unknown Campaign",
+        spend,
+        revenue,
+        roas: 0,
+        impressions,
+        clicks,
+        cpc: 0,
+        ctr: 0,
+        conversions,
+      });
+    }
+  }
+
+  return Array.from(adMap.values())
+    .map((ad) => ({
+      ...ad,
+      roas: ad.spend > 0 ? ad.revenue / ad.spend : 0,
+      cpc: ad.clicks > 0 ? ad.spend / ad.clicks : 0,
+      ctr: ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0,
+    }))
+    .sort((a, b) => b.spend - a.spend);
 }
 
 // Verify Meta credentials by making a lightweight API call

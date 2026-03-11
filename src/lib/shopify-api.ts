@@ -56,33 +56,48 @@ export async function fetchShopifyData(
   const dateFrom = format(startDate, "yyyy-MM-dd'T'00:00:00-00:00");
   const dateTo = format(endDate, "yyyy-MM-dd'T'23:59:59-00:00");
 
-  // Fetch orders in the date range
+  // Fetch orders in the date range — request only the fields we need for aggregation
+  const neededFields = "id,name,created_at,total_price,financial_status,line_items";
   const allOrders: ShopifyOrder[] = [];
-  const firstUrl = `${baseUrl}/orders.json?created_at_min=${encodeURIComponent(dateFrom)}&created_at_max=${encodeURIComponent(dateTo)}&status=any&limit=250`;
+  const firstUrl = `${baseUrl}/orders.json?created_at_min=${encodeURIComponent(dateFrom)}&created_at_max=${encodeURIComponent(dateTo)}&status=any&limit=250&fields=${neededFields}`;
+
+  const maxPages = 8; // Cap at ~2000 orders to prevent extreme slowness
+  let pageCount = 0;
 
   const fetchPage = async (url: string): Promise<void> => {
-    const response = await fetch(url, {
-      headers: {
-        "X-Shopify-Access-Token": credentials.accessToken,
-        "Content-Type": "application/json",
-      },
-    });
+    if (pageCount >= maxPages) return; // Safety cap
+    pageCount++;
 
-    if (!response.ok) {
-      const error = await response.text().catch(() => "");
-      throw new Error(`Shopify API error ${response.status}: ${error}`);
-    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout per page
 
-    const data: ShopifyOrdersResponse = await response.json();
-    allOrders.push(...(data.orders || []));
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "X-Shopify-Access-Token": credentials.accessToken,
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
 
-    // Handle pagination via Link header
-    const linkHeader = response.headers.get("Link");
-    if (linkHeader) {
-      const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
-      if (nextMatch) {
-        await fetchPage(nextMatch[1]);
+      if (!response.ok) {
+        const error = await response.text().catch(() => "");
+        throw new Error(`Shopify API error ${response.status}: ${error}`);
       }
+
+      const data: ShopifyOrdersResponse = await response.json();
+      allOrders.push(...(data.orders || []));
+
+      // Handle pagination via Link header
+      const linkHeader = response.headers.get("Link");
+      if (linkHeader && pageCount < maxPages) {
+        const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+        if (nextMatch) {
+          await fetchPage(nextMatch[1]);
+        }
+      }
+    } finally {
+      clearTimeout(timeout);
     }
   };
 

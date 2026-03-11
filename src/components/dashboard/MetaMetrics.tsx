@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ChannelPerformance, CampaignRow, DailyPerformance } from "@/types";
+import { ChannelPerformance, CampaignRow, AdRow, DailyPerformance } from "@/types";
 import { Megaphone } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -17,6 +17,7 @@ import { format, parseISO } from "date-fns";
 interface MetaMetricsProps {
   channelData?: ChannelPerformance;
   campaigns: CampaignRow[];
+  metaAds?: AdRow[];
   dailyPerformance: DailyPerformance[];
   loading: boolean;
   accountId?: string;
@@ -39,11 +40,13 @@ function fmtNum(value: number): string {
 export default function MetaMetrics({
   channelData,
   campaigns,
+  metaAds,
   dailyPerformance,
   loading,
   accountId,
 }: MetaMetricsProps) {
   const metaCampaigns = campaigns.filter((c) => c.channel === "meta");
+  const adRows = metaAds || [];
 
   if (loading) {
     return (
@@ -208,20 +211,22 @@ export default function MetaMetrics({
         )}
       </div>
 
-      {/* Creative Analytics Section */}
-      {metaCampaigns.length > 0 && (
+      {/* Creative Analytics Section — actual ad-level data */}
+      {adRows.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
           <div className="flex items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-700">Creative Analytics</h3>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">By Ad</span>
+            <span className="text-[10px] text-gray-400 ml-auto">{adRows.length} ads</span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
             <table className="w-full text-xs">
-              <thead>
+              <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Ad / Creative</th>
+                  <th className="text-left py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Campaign</th>
                   <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Spend</th>
-                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Impressions</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Impr.</th>
                   <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Clicks</th>
                   <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CTR</th>
                   <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CPC</th>
@@ -231,31 +236,31 @@ export default function MetaMetrics({
                 </tr>
               </thead>
               <tbody>
-                {metaCampaigns
-                  .sort((a, b) => b.spend - a.spend)
-                  .slice(0, 20)
-                  .map((c, i) => (
-                    <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                {adRows
+                  .slice(0, 30)
+                  .map((ad, i) => (
+                    <tr key={ad.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-2.5 px-2">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-[9px] font-bold text-blue-600 shrink-0">
                             {i + 1}
                           </div>
-                          <span className="font-medium text-gray-800 max-w-[220px] truncate">{c.name}</span>
+                          <span className="font-medium text-gray-800 max-w-[180px] truncate" title={ad.name}>{ad.name}</span>
                         </div>
                       </td>
-                      <td className="text-right py-2.5 px-2 text-gray-600 font-medium">{fmt(c.spend)}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">{fmtNum(c.impressions)}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">{fmtNum(c.clicks)}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">{c.ctr.toFixed(2)}%</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">₹{c.cpc.toFixed(2)}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-700 font-medium">{c.conversions.toLocaleString()}</td>
+                      <td className="py-2.5 px-2 text-gray-500 max-w-[140px] truncate" title={ad.campaignName}>{ad.campaignName}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600 font-medium">{fmt(ad.spend)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{fmtNum(ad.impressions)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{fmtNum(ad.clicks)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{ad.ctr.toFixed(2)}%</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{fmt(ad.cpc)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-700 font-medium">{ad.conversions.toLocaleString()}</td>
                       <td className="text-right py-2.5 px-2 text-gray-600">
-                        {c.conversions > 0 ? fmt(c.spend / c.conversions) : "—"}
+                        {ad.conversions > 0 ? fmt(ad.spend / ad.conversions) : "—"}
                       </td>
                       <td className="text-right py-2.5 px-2">
-                        <span className={`font-semibold ${c.roas >= 2 ? "text-emerald-600" : c.roas >= 1 ? "text-amber-600" : "text-red-500"}`}>
-                          {c.roas.toFixed(2)}x
+                        <span className={`font-semibold ${ad.roas >= 2 ? "text-emerald-600" : ad.roas >= 1 ? "text-amber-600" : "text-red-500"}`}>
+                          {ad.roas.toFixed(2)}x
                         </span>
                       </td>
                     </tr>
