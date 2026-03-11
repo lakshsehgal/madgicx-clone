@@ -14,6 +14,7 @@ import {
   Zap,
   LogOut,
   FileText,
+  Link2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +29,7 @@ export default function Sidebar() {
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/performance", label: "Performance", icon: BarChart3 },
+    { href: "/integrations", label: "Integrations", icon: Link2 },
     { href: "/automation", label: "Automation", icon: Zap },
     { href: "/settings", label: "Settings", icon: Settings },
     { href: "/api-docs", label: "API Application", icon: FileText },
