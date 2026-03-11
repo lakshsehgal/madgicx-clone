@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const shop = request.nextUrl.searchParams.get("shop");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Use NEXT_PUBLIC_APP_URL if set, otherwise derive from the incoming request
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
   if (!code || !shop) {
     return NextResponse.redirect(

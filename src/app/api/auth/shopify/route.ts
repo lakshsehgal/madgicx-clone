@@ -6,7 +6,8 @@ export async function GET(request: NextRequest) {
   const shop = request.nextUrl.searchParams.get("shop");
   const clientId = request.nextUrl.searchParams.get("client_id") || process.env.SHOPIFY_API_KEY;
   const clientSecret = request.nextUrl.searchParams.get("client_secret") || process.env.SHOPIFY_API_SECRET;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Use NEXT_PUBLIC_APP_URL if set, otherwise derive from the incoming request
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
   const redirectUri = `${appUrl}/api/auth/shopify/callback`;
 
   if (!clientId) {
