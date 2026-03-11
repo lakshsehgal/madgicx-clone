@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 import { Copy, Download, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
-const Q6_TEXT = `Neuroid is a marketing intelligence platform for e-commerce businesses. We build internal reporting tools that aggregate advertising data from Google Ads, Meta Ads, and Shopify into a unified dashboard. Our clients are e-commerce store owners who run Google Ads campaigns (Search, Shopping, Performance Max) and need consolidated cross-channel performance reporting.
+const Q6_TEXT = `Neurotic (by Neuroid) is a marketing intelligence platform for e-commerce businesses. We build internal reporting tools that aggregate advertising data from Google Ads, Meta Ads, and Shopify into a unified dashboard. Our clients are e-commerce store owners who run Google Ads campaigns (Search, Shopping, Performance Max) and need consolidated cross-channel performance reporting.
 
 We use the Google Ads API to pull campaign-level performance metrics (impressions, clicks, conversions, cost, conversion value) via GAQL queries against the searchStream endpoint. This data is displayed in our dashboard alongside Meta and Shopify data, allowing users to compare ROAS and spend allocation across channels.
 
@@ -26,7 +26,7 @@ export default function ApiDocsPage() {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
     printWindow.document.write(`
-      <html><head><title>Neuroid - Google Ads API Design Documentation</title>
+      <html><head><title>Neurotic - Google Ads API Design Documentation</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111; font-size: 13px; line-height: 1.6; }
@@ -73,18 +73,18 @@ export default function ApiDocsPage() {
         .verified-text { font-size: 11px; color: #059669; margin-top: 6px; }
         @media print { body { padding: 20px; } .mockup-container { page-break-inside: avoid; } }
       </style></head><body>
-      <h1>Neuroid - Google Ads API Design Documentation</h1>
+      <h1>Neurotic - Google Ads API Design Documentation</h1>
       <p class="subtitle">Marketing Intelligence Platform &middot; by Laksh Sehgal</p>
 
       <h2>Company Name</h2>
-      <p>Neuroid</p>
+      <p>Neurotic (by Neuroid)</p>
 
       <h2>Business Model</h2>
-      <p>Neuroid is a marketing intelligence platform for e-commerce businesses. We aggregate advertising performance data from Google Ads, Meta Ads, and Shopify into a single unified dashboard. Our clients are e-commerce store owners who advertise on Google and need consolidated reporting across all their marketing channels.</p>
+      <p>Neurotic is a marketing intelligence platform for e-commerce businesses. We aggregate advertising performance data from Google Ads, Meta Ads, and Shopify into a single unified dashboard. Our clients are e-commerce store owners who advertise on Google and need consolidated reporting across all their marketing channels.</p>
       <p>We manage Google Ads accounts owned by our clients. The tool is used internally by our team and by our clients to view campaign performance, generate reports, and make data-driven decisions about ad spend allocation.</p>
 
       <h2>Tool Access/Use</h2>
-      <p>Neuroid is a web-based internal tool used by our team and authorized client users to:</p>
+      <p>Neurotic is a web-based internal tool used by our team and authorized client users to:</p>
       <ul>
         <li><strong>View campaign performance reports</strong> — Users log in and see a dashboard showing Google Ads metrics (impressions, clicks, conversions, cost, ROAS) alongside Meta and Shopify data.</li>
         <li><strong>Generate cross-channel reports</strong> — The tool pulls Google Ads data and combines it with other channel data so users can compare performance across platforms.</li>
@@ -129,7 +129,7 @@ ORDER BY segments.date ASC</pre>
       <div class="mockup-container">
         <div class="mockup-frame">
           <div class="mockup-bar">
-            <span>Neuroid</span>
+            <span>Neurotic</span>
             <div class="tabs">
               <span class="tab active">Dashboard</span>
               <span class="tab">Performance</span>

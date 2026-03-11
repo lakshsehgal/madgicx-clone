@@ -4,9 +4,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 
 export const metadata: Metadata = {
-  title: "Neuroid - Marketing Intelligence Platform",
+  title: "Neurotic by Neuroid - Marketing Intelligence Platform",
   description:
-    "Unified marketing performance dashboard with Meta, Google & Shopify data via Windsor.ai",
+    "Unified marketing performance dashboard with Meta, Google & Shopify data",
 };
 
 export default function RootLayout({

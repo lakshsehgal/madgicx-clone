@@ -11,6 +11,7 @@ import {
   ChannelPerformance,
   DailyPerformance,
   CampaignRow,
+  ShopifyDetails,
 } from "@/types";
 
 // GET - demo data fallback
@@ -67,7 +68,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Fetch from all connected platforms in parallel
     const [metaResult, googleResult, shopifyResult] = await Promise.allSettled([
       metaCredentials ? fetchMetaData(metaCredentials, start, end) : Promise.resolve(null),
       googleCredentials ? fetchGoogleAdsData(googleCredentials, start, end) : Promise.resolve(null),
@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
     const google = googleResult.status === "fulfilled" ? googleResult.value : null;
     const shopify = shopifyResult.status === "fulfilled" ? shopifyResult.value : null;
 
-    // Collect any errors
     const errors: string[] = [];
     if (metaCredentials && metaResult.status === "rejected") {
       errors.push(`Meta: ${metaResult.reason}`);
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
       errors.push(`Shopify: ${shopifyResult.reason}`);
     }
 
-    // Build channel breakdown
+    // Build channel breakdown with enhanced metrics
     const channelBreakdown: ChannelPerformance[] = [];
 
     if (meta) {
@@ -106,6 +105,8 @@ export async function POST(request: NextRequest) {
         clicks: metaClicks,
         cpc: metaClicks > 0 ? meta.totalSpend / metaClicks : 0,
         ctr: metaImpressions > 0 ? (metaClicks / metaImpressions) * 100 : 0,
+        cpm: metaImpressions > 0 ? (meta.totalSpend / metaImpressions) * 1000 : 0,
+        campaignCount: meta.campaigns.length,
       });
     }
 
@@ -122,6 +123,8 @@ export async function POST(request: NextRequest) {
         clicks: gClicks,
         cpc: gClicks > 0 ? google.totalSpend / gClicks : 0,
         ctr: gImpressions > 0 ? (gClicks / gImpressions) * 100 : 0,
+        cpm: gImpressions > 0 ? (google.totalSpend / gImpressions) * 1000 : 0,
+        campaignCount: google.campaigns.length,
       });
     }
 
@@ -157,7 +160,7 @@ export async function POST(request: NextRequest) {
       clicks: totalClicks,
     };
 
-    // Merge daily performance
+    // Merge daily performance with per-channel breakdowns
     const dailyMap = new Map<string, DailyPerformance>();
 
     const addDaily = (items: { date: string; spend?: number; revenue: number; conversions?: number; orders?: number }[], channel: string) => {
@@ -175,9 +178,18 @@ export async function POST(request: NextRequest) {
         existing.revenue += item.revenue;
         existing.conversions += conversions;
 
-        if (channel === "meta") existing.meta_spend = (existing.meta_spend || 0) + spend;
-        if (channel === "google") existing.google_spend = (existing.google_spend || 0) + spend;
-        if (channel === "shopify") existing.shopify_revenue = (existing.shopify_revenue || 0) + item.revenue;
+        if (channel === "meta") {
+          existing.meta_spend = (existing.meta_spend || 0) + spend;
+          existing.meta_revenue = (existing.meta_revenue || 0) + item.revenue;
+        }
+        if (channel === "google") {
+          existing.google_spend = (existing.google_spend || 0) + spend;
+          existing.google_revenue = (existing.google_revenue || 0) + item.revenue;
+        }
+        if (channel === "shopify") {
+          existing.shopify_revenue = (existing.shopify_revenue || 0) + item.revenue;
+          existing.shopify_orders = (existing.shopify_orders || 0) + (("orders" in item ? item.orders : 0) || 0);
+        }
 
         existing.roas = existing.spend > 0 ? existing.revenue / existing.spend : 0;
         dailyMap.set(item.date, existing);
@@ -199,11 +211,22 @@ export async function POST(request: NextRequest) {
       ...(shopify?.productBreakdown || []),
     ];
 
+    // Shopify details
+    const shopifyDetails: ShopifyDetails | undefined = shopify
+      ? {
+          totalSales: shopify.totalRevenue,
+          totalOrders: shopify.totalOrders,
+          avgOrderValue: shopify.avgOrderValue,
+          totalItems: shopify.totalItems,
+        }
+      : undefined;
+
     return NextResponse.json({
       kpis,
       channelBreakdown,
       dailyPerformance,
       campaigns,
+      shopifyDetails,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (err) {

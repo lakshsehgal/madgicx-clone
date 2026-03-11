@@ -47,6 +47,9 @@ export async function fetchShopifyData(
   startDate: Date,
   endDate: Date
 ): Promise<ShopifyResult> {
+  if (!credentials.accessToken || !credentials.storeUrl) {
+    throw new Error("Missing Shopify store URL or access token");
+  }
   const storeUrl = cleanStoreUrl(credentials.storeUrl);
   const baseUrl = `https://${storeUrl}/admin/api/2024-10`;
 

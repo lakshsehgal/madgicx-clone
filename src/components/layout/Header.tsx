@@ -30,29 +30,29 @@ export default function Header({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white/80 glass border-b border-border-light px-6 py-4 sticky top-0 z-40">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
             {activeClientSpace
-              ? `${activeClientSpace.name} Dashboard`
+              ? `${activeClientSpace.name}`
               : "Marketing Dashboard"}
           </h1>
           {activeClientSpace && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5 font-medium">
               {activeClientSpace.connectedChannels
                 .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
-                .join(", ") || "No accounts connected"}
+                .join(" + ") || "No accounts connected"}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Date Range Picker */}
           <div className="relative">
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-border rounded-xl text-sm font-medium text-gray-600 hover:border-primary-300 hover:text-primary-600 transition-all shadow-card"
             >
               <Calendar className="w-4 h-4" />
               {format(dateRange.from, "MMM d")} -{" "}
@@ -60,7 +60,7 @@ export default function Header({
             </button>
 
             {showDatePicker && (
-              <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-50 min-w-[200px]">
+              <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-elevated border border-border-light p-2 z-50 min-w-[220px]">
                 {presets.map((preset) => (
                   <button
                     key={preset.days}
@@ -71,15 +71,15 @@ export default function Header({
                       });
                       setShowDatePicker(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                    className="w-full text-left px-3.5 py-2.5 text-sm rounded-lg hover:bg-surface-tertiary transition-colors font-medium text-gray-600 hover:text-gray-900"
                   >
                     {preset.label}
                   </button>
                 ))}
-                <hr className="my-2" />
+                <hr className="my-2 border-border-light" />
                 <div className="px-3 py-2 space-y-2">
                   <div>
-                    <label className="text-xs text-gray-500">From</label>
+                    <label className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">From</label>
                     <input
                       type="date"
                       value={format(dateRange.from, "yyyy-MM-dd")}
@@ -89,11 +89,11 @@ export default function Header({
                           from: new Date(e.target.value),
                         })
                       }
-                      className="w-full mt-1 px-2 py-1 text-sm border rounded"
+                      className="w-full mt-1 px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500">To</label>
+                    <label className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">To</label>
                     <input
                       type="date"
                       value={format(dateRange.to, "yyyy-MM-dd")}
@@ -103,7 +103,7 @@ export default function Header({
                           to: new Date(e.target.value),
                         })
                       }
-                      className="w-full mt-1 px-2 py-1 text-sm border rounded"
+                      className="w-full mt-1 px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none"
                     />
                   </div>
                 </div>
@@ -115,10 +115,10 @@ export default function Header({
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="p-2.5 rounded-xl border border-border bg-white hover:border-primary-300 hover:text-primary-600 transition-all disabled:opacity-50 shadow-card"
           >
             <RefreshCw
-              className={`w-4 h-4 text-gray-600 ${loading ? "animate-spin" : ""}`}
+              className={`w-4 h-4 text-gray-500 ${loading ? "animate-spin" : ""}`}
             />
           </button>
         </div>

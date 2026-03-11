@@ -126,7 +126,7 @@ export default function SettingsPage() {
               Data Sources
             </h2>
             <p className="text-sm text-gray-600 mb-2">
-              Neuroid connects directly to your ad platforms via their official APIs:
+              Neurotic connects directly to your ad platforms via their official APIs:
             </p>
             <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
               <li>Meta Marketing API (v21.0) - Campaign insights and conversion data</li>

@@ -17,11 +17,10 @@ export interface GoogleAdsCredentials {
 export interface ShopifyCredentials {
   storeUrl: string; // e.g., mystore.myshopify.com
   accessToken: string;
-  clientId?: string; // Shopify app Client ID (from Partners dashboard)
-  clientSecret?: string; // Shopify app Client Secret
+  clientId?: string;
+  clientSecret?: string;
 }
 
-// A client space within the Neuroid workspace
 export interface ClientSpace {
   id: string;
   name: string;
@@ -53,6 +52,8 @@ export interface ChannelPerformance {
   clicks: number;
   cpc: number;
   ctr: number;
+  cpm?: number;
+  campaignCount?: number;
 }
 
 export interface DailyPerformance {
@@ -64,6 +65,9 @@ export interface DailyPerformance {
   meta_spend?: number;
   google_spend?: number;
   shopify_revenue?: number;
+  meta_revenue?: number;
+  google_revenue?: number;
+  shopify_orders?: number;
 }
 
 export interface CampaignRow {
@@ -84,4 +88,21 @@ export interface CampaignRow {
 export interface DateRange {
   from: Date;
   to: Date;
+}
+
+export interface ShopifyDetails {
+  totalSales: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  totalItems: number;
+}
+
+export interface DashboardData {
+  kpis: KPIData;
+  channelBreakdown: ChannelPerformance[];
+  dailyPerformance: DailyPerformance[];
+  campaigns: CampaignRow[];
+  shopifyDetails?: ShopifyDetails;
+  demo?: boolean;
+  errors?: string[];
 }

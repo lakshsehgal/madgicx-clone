@@ -44,8 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    // Only clear auth state - workspace data is preserved separately
     setIsAuthenticated(false);
     localStorage.removeItem(AUTH_KEY);
+    // Explicitly do NOT touch workspace keys:
+    // neuroid_client_spaces and neuroid_active_client_space stay intact
   };
 
   if (!loaded) return null;
