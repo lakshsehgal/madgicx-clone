@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Neuroid - Google Ads API Tool Mockup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; }
+
+    /* Mockup 1: Dashboard */
+    .mockup { max-width: 1100px; margin: 40px auto; background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .mockup-header { background: #1e1e2d; color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .mockup-header h2 { font-size: 18px; font-weight: 700; }
+    .mockup-header .tabs { display: flex; gap: 12px; }
+    .mockup-header .tab { padding: 6px 16px; border-radius: 8px; font-size: 13px; background: rgba(255,255,255,0.1); }
+    .mockup-header .tab.active { background: #6366f1; }
+    .date-badge { background: #f3f4f6; color: #374151; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+
+    .mockup-body { padding: 24px; }
+
+    /* Title bar */
+    .title-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .title-bar h1 { font-size: 22px; font-weight: 700; color: #111827; }
+
+    /* KPI Cards */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+    .kpi-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .kpi-value { font-size: 26px; font-weight: 700; color: #111827; }
+    .kpi-sub { font-size: 11px; color: #10b981; margin-top: 2px; }
+
+    /* Chart area */
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+    .chart-card h3 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 16px; }
+
+    /* Fake chart */
+    .fake-chart { height: 180px; background: linear-gradient(180deg, #eef2ff 0%, #fff 100%); border-radius: 8px; position: relative; overflow: hidden; }
+    .chart-line { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; }
+    .chart-line svg { width: 100%; height: 100%; }
+
+    /* Channel breakdown */
+    .channel-list { }
+    .channel-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+    .channel-row:last-child { border-bottom: none; }
+    .channel-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; display: inline-block; }
+    .channel-name { font-size: 13px; color: #374151; font-weight: 500; }
+    .channel-metrics { display: flex; gap: 24px; }
+    .channel-metric { text-align: right; }
+    .channel-metric .label { font-size: 10px; color: #9ca3af; }
+    .channel-metric .val { font-size: 13px; font-weight: 600; color: #111827; }
+
+    /* Campaign table */
+    .table-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+    .table-card h3 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; padding: 10px 12px; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+    .status-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+    .status-active { background: #dcfce7; color: #166534; }
+    .status-paused { background: #fef3c7; color: #92400e; }
+    .channel-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+    .ch-google { background: #dbeafe; color: #1e40af; }
+    .ch-meta { background: #ede9fe; color: #5b21b6; }
+    .ch-shopify { background: #d1fae5; color: #065f46; }
+
+    /* Mockup 2: Connection Setup */
+    .setup-mockup { max-width: 600px; margin: 40px auto; background: white; border: 2px solid #e5e7eb; border-radius: 16px; padding: 40px; }
+    .setup-mockup h1 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .setup-mockup .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+    .setup-section { border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+    .setup-section-header { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; }
+    .setup-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+    .setup-icon.meta { background: #1877F2; }
+    .setup-icon.google { background: #4285F4; }
+    .setup-icon.shopify { background: #96BF48; }
+    .setup-section-body { padding: 0 16px 16px; border-top: 1px solid #f3f4f6; padding-top: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 4px; }
+    .form-group input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; }
+    .verify-btn { padding: 6px 16px; font-size: 12px; font-weight: 500; background: #dbeafe; color: #1e40af; border: none; border-radius: 8px; cursor: pointer; }
+    .verified { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #059669; margin-top: 8px; }
+
+    .page-label { text-align: center; font-size: 14px; font-weight: 600; color: #6b7280; margin: 40px 0 0; text-transform: uppercase; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+
+  <p class="page-label">Mockup 1: Google Ads Performance Dashboard</p>
+
+  <div class="mockup">
+    <div class="mockup-header">
+      <h2>Neuroid</h2>
+      <div class="tabs">
+        <div class="tab active">Dashboard</div>
+        <div class="tab">Performance</div>
+        <div class="tab">Automation</div>
+        <div class="tab">Settings</div>
+      </div>
+    </div>
+    <div class="mockup-body">
+      <div class="title-bar">
+        <h1>Google Ads Account-Level Performance</h1>
+        <div class="date-badge">Mar 1 – Mar 11, 2026</div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Impressions</div>
+          <div class="kpi-value">1,24,350</div>
+          <div class="kpi-sub">+12.4% vs prior period</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Clicks</div>
+          <div class="kpi-value">6,812</div>
+          <div class="kpi-sub">+8.7% vs prior period</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Conversions</div>
+          <div class="kpi-value">583</div>
+          <div class="kpi-sub">+15.2% vs prior period</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cost</div>
+          <div class="kpi-value">₹2,18,400</div>
+          <div class="kpi-sub">CPC: ₹32.06</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <h3>Spend vs Revenue (Daily)</h3>
+          <div class="fake-chart">
+            <div class="chart-line">
+              <svg viewBox="0 0 500 120" preserveAspectRatio="none">
+                <polyline fill="none" stroke="#6366f1" stroke-width="2" points="0,100 50,85 100,70 150,55 200,60 250,45 300,35 350,50 400,30 450,20 500,25" />
+                <polyline fill="none" stroke="#10b981" stroke-width="2" points="0,90 50,80 100,65 150,50 200,55 250,40 300,30 350,45 400,25 450,15 500,20" />
+                <polyline fill="rgba(99,102,241,0.1)" stroke="none" points="0,120 0,100 50,85 100,70 150,55 200,60 250,45 300,35 350,50 400,30 450,20 500,25 500,120" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>Channel Breakdown</h3>
+          <div class="channel-list">
+            <div class="channel-row">
+              <div><span class="channel-dot" style="background:#4285F4"></span><span class="channel-name">Google Ads</span></div>
+              <div class="channel-metrics">
+                <div class="channel-metric"><div class="label">Spend</div><div class="val">₹2,18,400</div></div>
+                <div class="channel-metric"><div class="label">Revenue</div><div class="val">₹6,94,200</div></div>
+                <div class="channel-metric"><div class="label">ROAS</div><div class="val">3.18x</div></div>
+              </div>
+            </div>
+            <div class="channel-row">
+              <div><span class="channel-dot" style="background:#1877F2"></span><span class="channel-name">Meta Ads</span></div>
+              <div class="channel-metrics">
+                <div class="channel-metric"><div class="label">Spend</div><div class="val">₹1,86,300</div></div>
+                <div class="channel-metric"><div class="label">Revenue</div><div class="val">₹5,21,640</div></div>
+                <div class="channel-metric"><div class="label">ROAS</div><div class="val">2.80x</div></div>
+              </div>
+            </div>
+            <div class="channel-row">
+              <div><span class="channel-dot" style="background:#96BF48"></span><span class="channel-name">Shopify</span></div>
+              <div class="channel-metrics">
+                <div class="channel-metric"><div class="label">Spend</div><div class="val">—</div></div>
+                <div class="channel-metric"><div class="label">Revenue</div><div class="val">₹12,45,800</div></div>
+                <div class="channel-metric"><div class="label">ROAS</div><div class="val">—</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <h3>Campaign-Level Performance (Google Ads)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th>Channel</th>
+              <th>Status</th>
+              <th>Impressions</th>
+              <th>Clicks</th>
+              <th>CPC</th>
+              <th>CTR</th>
+              <th>Conversions</th>
+              <th>Cost</th>
+              <th>Revenue</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Search - Brand Terms</strong></td>
+              <td><span class="channel-badge ch-google">Google</span></td>
+              <td><span class="status-badge status-active">Active</span></td>
+              <td>42,100</td>
+              <td>2,840</td>
+              <td>₹18.50</td>
+              <td>6.75%</td>
+              <td>245</td>
+              <td>₹52,540</td>
+              <td>₹2,18,400</td>
+              <td>4.16x</td>
+            </tr>
+            <tr>
+              <td><strong>Search - Generic Keywords</strong></td>
+              <td><span class="channel-badge ch-google">Google</span></td>
+              <td><span class="status-badge status-active">Active</span></td>
+              <td>38,200</td>
+              <td>1,920</td>
+              <td>₹38.20</td>
+              <td>5.03%</td>
+              <td>156</td>
+              <td>₹73,344</td>
+              <td>₹1,95,000</td>
+              <td>2.66x</td>
+            </tr>
+            <tr>
+              <td><strong>Shopping - All Products</strong></td>
+              <td><span class="channel-badge ch-google">Google</span></td>
+              <td><span class="status-badge status-active">Active</span></td>
+              <td>28,450</td>
+              <td>1,380</td>
+              <td>₹42.10</td>
+              <td>4.85%</td>
+              <td>118</td>
+              <td>₹58,098</td>
+              <td>₹1,62,800</td>
+              <td>2.80x</td>
+            </tr>
+            <tr>
+              <td><strong>Performance Max - Main</strong></td>
+              <td><span class="channel-badge ch-google">Google</span></td>
+              <td><span class="status-badge status-active">Active</span></td>
+              <td>15,600</td>
+              <td>672</td>
+              <td>₹51.40</td>
+              <td>4.31%</td>
+              <td>64</td>
+              <td>₹34,541</td>
+              <td>₹1,18,000</td>
+              <td>3.42x</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 12px; font-size: 11px; color: #9ca3af;">Data pulled via Google Ads API v18 using GAQL searchStream endpoint</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="page-label">Mockup 2: Google Ads API Credential Setup</p>
+
+  <div class="setup-mockup">
+    <h1>New Client Space</h1>
+    <p class="subtitle">Connect ad accounts directly via their APIs</p>
+
+    <div class="setup-section">
+      <div class="setup-section-header">
+        <div class="setup-icon google">G</div>
+        <div>
+          <div style="font-size:14px; font-weight:600; color:#111827;">Google Ads ✅</div>
+          <div style="font-size:12px; color:#6b7280;">Search, Display, Shopping & Performance Max</div>
+        </div>
+      </div>
+      <div class="setup-section-body">
+        <div class="form-group">
+          <label>Developer Token</label>
+          <input type="text" value="AbCdEf-XXXXXXXXXXXX" readonly style="background:#f9fafb;" />
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label>OAuth Client ID</label>
+            <input type="text" value="812345.apps.googleusercontent.com" readonly style="background:#f9fafb;" />
+          </div>
+          <div class="form-group">
+            <label>OAuth Client Secret</label>
+            <input type="password" value="xxxxxxxxxxxxxxxx" readonly style="background:#f9fafb;" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Refresh Token</label>
+          <input type="password" value="xxxxxxxxxxxxxxxxxxxxxxxxx" readonly style="background:#f9fafb;" />
+        </div>
+        <div class="form-group">
+          <label>Customer ID</label>
+          <input type="text" value="123-456-7890" readonly style="background:#f9fafb;" />
+        </div>
+        <button class="verify-btn">Verify Connection</button>
+        <div class="verified">✓ Connected: My Google Ads Account</div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-header">
+        <div class="setup-icon meta">M</div>
+        <div>
+          <div style="font-size:14px; font-weight:600; color:#111827;">Meta Ads</div>
+          <div style="font-size:12px; color:#6b7280;">Facebook & Instagram advertising</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-header">
+        <div class="setup-icon shopify">S</div>
+        <div>
+          <div style="font-size:14px; font-weight:600; color:#111827;">Shopify</div>
+          <div style="font-size:12px; color:#6b7280;">E-commerce store orders & revenue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; font-size:11px; color:#9ca3af; margin: 40px 0;">Neuroid - Marketing Intelligence Platform | Tool Mockups for Google Ads API Application</p>
+
+</body>
+</html>
