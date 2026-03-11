@@ -37,6 +37,26 @@ export default function DashboardPage() {
   const [isDemoData, setIsDemoData] = useState(false);
   const [apiErrors, setApiErrors] = useState<string[]>([]);
 
+  const cacheKey = activeClientSpace
+    ? `neurotic_dash_${activeClientSpace.id}_${format(dateRange.from, "yyyyMMdd")}_${format(dateRange.to, "yyyyMMdd")}`
+    : "";
+
+  // Restore cached data on mount / workspace change so the UI renders instantly
+  useEffect(() => {
+    if (!cacheKey) return;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const d = JSON.parse(cached);
+        setChannelBreakdown(d.channelBreakdown || []);
+        setDailyPerformance(d.dailyPerformance || []);
+        setCampaigns(d.campaigns || []);
+        setShopifyDetails(d.shopifyDetails);
+        setIsDemoData(!!d.demo);
+      }
+    } catch { /* ignore */ }
+  }, [cacheKey]);
+
   const fetchData = useCallback(async () => {
     if (!activeClientSpace) return;
     setLoading(true);
@@ -76,12 +96,15 @@ export default function DashboardPage() {
       setShopifyDetails(data.shopifyDetails);
       setIsDemoData(!!data.demo);
       if (data.errors) setApiErrors(data.errors);
+
+      // Cache the result for instant subsequent loads
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* quota */ }
     } catch {
       setIsDemoData(true);
     } finally {
       setLoading(false);
     }
-  }, [dateRange, activeClientSpace]);
+  }, [dateRange, activeClientSpace, cacheKey]);
 
   useEffect(() => {
     if (activeClientSpace) {
@@ -196,6 +219,7 @@ export default function DashboardPage() {
             campaigns={campaigns}
             dailyPerformance={dailyPerformance}
             loading={loading}
+            accountId={activeClientSpace?.metaCredentials?.adAccountId}
           />
 
           {/* Divider */}
@@ -207,6 +231,7 @@ export default function DashboardPage() {
             campaigns={campaigns}
             dailyPerformance={dailyPerformance}
             loading={loading}
+            customerId={activeClientSpace?.googleCredentials?.customerId}
           />
 
           {/* Divider */}
@@ -218,6 +243,7 @@ export default function DashboardPage() {
             campaigns={campaigns}
             dailyPerformance={dailyPerformance}
             loading={loading}
+            storeUrl={activeClientSpace?.shopifyCredentials?.storeUrl}
           />
         </main>
       </div>

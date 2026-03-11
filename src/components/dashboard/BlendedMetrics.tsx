@@ -1,18 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  ChannelPerformance,
-  DailyPerformance,
-  ShopifyDetails,
-} from "@/types";
-import {
-  DollarSign,
-  TrendingUp,
-  Target,
-  ShoppingCart,
-  UserCheck,
-} from "lucide-react";
+import { ChannelPerformance, DailyPerformance, ShopifyDetails } from "@/types";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -32,7 +21,7 @@ interface BlendedMetricsProps {
   loading: boolean;
 }
 
-function formatCurrency(value: number): string {
+function fmt(value: number): string {
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)}Cr`;
   if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
   if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
@@ -57,110 +46,69 @@ export default function BlendedMetrics({
   const blendedCAC = shopifyOrders > 0 ? blendedAdspend / shopifyOrders : 0;
 
   const cards = [
-    {
-      label: "Blended Adspend",
-      value: formatCurrency(blendedAdspend),
-      subtitle: "Meta + Google",
-      icon: DollarSign,
-      gradient: "from-red-500 to-orange-500",
-      bgGlow: "bg-red-500/5",
-    },
-    {
-      label: "Shopify Total Sales",
-      value: formatCurrency(shopifyTotalSales),
-      subtitle: `${shopifyOrders} orders`,
-      icon: ShoppingCart,
-      gradient: "from-emerald-500 to-green-500",
-      bgGlow: "bg-emerald-500/5",
-    },
-    {
-      label: "Blended ROAS",
-      value: `${blendedROAS.toFixed(2)}x`,
-      subtitle: "Sales / Adspend",
-      icon: Target,
-      gradient: "from-primary-500 to-violet-500",
-      bgGlow: "bg-primary-500/5",
-    },
-    {
-      label: "Shopify AOV",
-      value: formatCurrency(shopifyAOV),
-      subtitle: "Avg Order Value",
-      icon: TrendingUp,
-      gradient: "from-cyan-500 to-blue-500",
-      bgGlow: "bg-cyan-500/5",
-    },
-    {
-      label: "Blended CAC",
-      value: formatCurrency(blendedCAC),
-      subtitle: "Adspend / Orders",
-      icon: UserCheck,
-      gradient: "from-amber-500 to-orange-500",
-      bgGlow: "bg-amber-500/5",
-    },
+    { label: "BLENDED AD SPEND", value: fmt(blendedAdspend), sub: `Meta ${fmt(meta?.spend || 0)} + Google ${fmt(google?.spend || 0)}`, color: "metric-card-amber" },
+    { label: "SHOPIFY TOTAL SALES", value: fmt(shopifyTotalSales), sub: `${shopifyOrders.toLocaleString()} orders`, color: "metric-card-green" },
+    { label: "BLENDED ROAS", value: `${blendedROAS.toFixed(2)}x`, sub: "Shopify Sales / Adspend", color: "metric-card-blue" },
+    { label: "TOTAL SHOPIFY ORDERS", value: shopifyOrders.toLocaleString(), sub: "", color: "metric-card-blue" },
+    { label: "AVERAGE ORDER VALUE", value: fmt(shopifyAOV), sub: "", color: "metric-card-amber" },
+    { label: "BLENDED CAC", value: fmt(blendedCAC), sub: "Total Adspend / Orders", color: "metric-card-amber" },
+    { label: "META AD SPEND", value: fmt(meta?.spend || 0), sub: "", color: "metric-card-sky" },
+    { label: "GOOGLE AD SPEND", value: fmt(google?.spend || 0), sub: "", color: "metric-card-teal" },
   ];
 
   const formatDate = (dateStr: string) => {
-    try {
-      return format(parseISO(dateStr), "MMM d");
-    } catch {
-      return dateStr;
-    }
+    try { return format(parseISO(dateStr), "MMM d"); } catch { return dateStr; }
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-6 bg-gray-200 rounded w-48 animate-pulse" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl p-5 border border-border-light animate-pulse">
-              <div className="h-3 bg-gray-200 rounded w-20 mb-3" />
-              <div className="h-7 bg-gray-200 rounded w-24" />
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+          <div className="h-7 bg-gray-200 rounded w-64 animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse">
+              <div className="h-3 bg-gray-200 rounded w-28 mb-4" />
+              <div className="h-8 bg-gray-200 rounded w-24" />
             </div>
           ))}
-        </div>
-        <div className="bg-white rounded-2xl border border-border-light p-6 animate-pulse">
-          <div className="h-72 bg-gray-100 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="section-header section-header-blended text-lg font-bold text-gray-900">
-        Blended Metrics
-      </h2>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.label}
-              className={`metric-card bg-white rounded-2xl p-5 border border-border-light shadow-card relative overflow-hidden`}
-            >
-              <div className={`absolute top-0 right-0 w-24 h-24 ${card.bgGlow} rounded-full -translate-y-8 translate-x-8`} />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`p-1.5 rounded-lg bg-gradient-to-br ${card.gradient}`}>
-                    <Icon className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                    {card.label}
-                  </span>
-                </div>
-                <p className="text-2xl font-bold text-gray-900 metric-value">{card.value}</p>
-                <p className="text-[11px] text-gray-400 mt-1 font-medium">{card.subtitle}</p>
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-5">
+      {/* Section Header */}
+      <div>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="section-number">1</div>
+          <h2 className="text-2xl font-bold text-gray-900">Blended Executive Summary</h2>
+        </div>
+        <p className="text-sm text-gray-500 ml-11">
+          Cross-channel performance overview — Meta + Google Ads spend vs Shopify revenue.
+        </p>
       </div>
 
-      {/* Daily Numbers Chart */}
-      <div className="bg-white rounded-2xl border border-border-light p-6 shadow-card">
+      {/* KPI Cards - 2 rows of 4 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {cards.map((card) => (
+          <div key={card.label} className={`metric-card ${card.color} p-5 shadow-card`}>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              {card.label}
+            </p>
+            <p className="text-3xl font-bold text-gray-900 metric-value">{card.value}</p>
+            {card.sub && (
+              <p className="text-xs text-gray-400 mt-2">{card.sub}</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Daily Chart */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-card">
         <h3 className="text-sm font-semibold text-gray-700 mb-4">Daily Blended Performance</h3>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={dailyPerformance}>
@@ -175,48 +123,20 @@ export default function BlendedMetrics({
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f7" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatDate}
-              tick={{ fontSize: 11, fill: "#9ca3af" }}
-              stroke="#e5e8f0"
-            />
+            <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: "#9ca3af" }} stroke="#e5e8f0" />
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} stroke="#e5e8f0" />
             <Tooltip
               labelFormatter={(label) => formatDate(String(label))}
-              contentStyle={{
-                borderRadius: "12px",
-                border: "1px solid #e5e8f0",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                fontSize: "12px",
-              }}
+              contentStyle={{ borderRadius: "12px", border: "1px solid #e5e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: "12px" }}
               formatter={(value, name) => {
                 const v = Number(value);
                 const n = String(name);
-                const label = n === "spend" ? "Blended Adspend" : "Shopify Revenue";
-                return [`₹${v.toFixed(2)}`, label];
+                return [`₹${v.toFixed(2)}`, n === "spend" ? "Blended Adspend" : "Shopify Revenue"];
               }}
             />
-            <Legend
-              formatter={(value) => (value === "spend" ? "Blended Adspend" : "Shopify Revenue")}
-              wrapperStyle={{ fontSize: "12px" }}
-            />
-            <Area
-              type="monotone"
-              dataKey="spend"
-              stroke="#ef4444"
-              strokeWidth={2}
-              fill="url(#blendedSpendGrad)"
-              dot={false}
-            />
-            <Area
-              type="monotone"
-              dataKey="shopify_revenue"
-              stroke="#10b981"
-              strokeWidth={2}
-              fill="url(#shopifyRevGrad)"
-              dot={false}
-            />
+            <Legend formatter={(value) => (value === "spend" ? "Blended Adspend" : "Shopify Revenue")} wrapperStyle={{ fontSize: "12px" }} />
+            <Area type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} fill="url(#blendedSpendGrad)" dot={false} />
+            <Area type="monotone" dataKey="shopify_revenue" stroke="#10b981" strokeWidth={2} fill="url(#shopifyRevGrad)" dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

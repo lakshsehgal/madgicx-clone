@@ -2,15 +2,7 @@
 
 import React from "react";
 import { ChannelPerformance, CampaignRow, DailyPerformance } from "@/types";
-import {
-  DollarSign,
-  TrendingUp,
-  Target,
-  Megaphone,
-  Eye,
-  MousePointerClick,
-  Percent,
-} from "lucide-react";
+import { Megaphone } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -27,17 +19,19 @@ interface MetaMetricsProps {
   campaigns: CampaignRow[];
   dailyPerformance: DailyPerformance[];
   loading: boolean;
+  accountId?: string;
 }
 
-function formatCurrency(value: number): string {
+function fmt(value: number): string {
   if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)}Cr`;
   if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
   if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
   return `₹${value.toFixed(0)}`;
 }
 
-function formatNumber(value: number): string {
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+function fmtNum(value: number): string {
+  if (value >= 10000000) return `${(value / 10000000).toFixed(2)}Cr`;
+  if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
   return value.toLocaleString();
 }
@@ -47,18 +41,22 @@ export default function MetaMetrics({
   campaigns,
   dailyPerformance,
   loading,
+  accountId,
 }: MetaMetricsProps) {
   const metaCampaigns = campaigns.filter((c) => c.channel === "meta");
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-6 bg-gray-200 rounded w-36 animate-pulse" />
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl p-4 border border-border-light animate-pulse">
-              <div className="h-3 bg-gray-200 rounded w-16 mb-2" />
-              <div className="h-6 bg-gray-200 rounded w-20" />
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+          <div className="h-7 bg-gray-200 rounded w-56 animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse">
+              <div className="h-3 bg-gray-200 rounded w-24 mb-4" />
+              <div className="h-8 bg-gray-200 rounded w-20" />
             </div>
           ))}
         </div>
@@ -68,11 +66,12 @@ export default function MetaMetrics({
 
   if (!channelData) {
     return (
-      <div className="space-y-4">
-        <h2 className="section-header section-header-meta text-lg font-bold text-gray-900">
-          Meta Metrics
-        </h2>
-        <div className="bg-white rounded-2xl border border-border-light p-8 text-center shadow-card">
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="section-number">2</div>
+          <h2 className="text-2xl font-bold text-gray-900">Meta Ads Performance</h2>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center shadow-card">
           <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
             <Megaphone className="w-6 h-6 text-blue-400" />
           </div>
@@ -82,14 +81,20 @@ export default function MetaMetrics({
     );
   }
 
-  const cards = [
-    { label: "Adspend", value: formatCurrency(channelData.spend), icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Revenue", value: formatCurrency(channelData.revenue), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "ROAS", value: `${channelData.roas.toFixed(2)}x`, icon: Target, color: "text-violet-600", bg: "bg-violet-50" },
-    { label: "Campaigns", value: String(channelData.campaignCount || metaCampaigns.length), icon: Megaphone, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "CPM", value: `₹${(channelData.cpm || 0).toFixed(2)}`, icon: Eye, color: "text-cyan-600", bg: "bg-cyan-50" },
-    { label: "CTR", value: `${channelData.ctr.toFixed(2)}%`, icon: Percent, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "CPC", value: `₹${channelData.cpc.toFixed(2)}`, icon: MousePointerClick, color: "text-rose-600", bg: "bg-rose-50" },
+  const cpa = channelData.conversions > 0 ? channelData.spend / channelData.conversions : 0;
+
+  const row1 = [
+    { label: "META TOTAL SPEND", value: fmt(channelData.spend), color: "metric-card-amber" },
+    { label: "META ATTRIBUTED REVENUE", value: fmt(channelData.revenue), color: "metric-card-green" },
+    { label: "META ROAS", value: `${channelData.roas.toFixed(2)}x`, color: "metric-card-blue" },
+    { label: "TOTAL PURCHASES", value: channelData.conversions.toLocaleString(), color: "metric-card-blue" },
+  ];
+
+  const row2 = [
+    { label: "TOTAL IMPRESSIONS", value: fmtNum(channelData.impressions), color: "metric-card-sky" },
+    { label: "BLENDED CPM (₹)", value: fmt(channelData.cpm || 0), color: "metric-card-amber" },
+    { label: "AVG CPA (₹)", value: fmt(cpa), color: "metric-card-red" },
+    { label: "AVG CTR", value: `${channelData.ctr.toFixed(2)}%`, color: "metric-card-teal" },
   ];
 
   const formatDate = (dateStr: string) => {
@@ -98,40 +103,52 @@ export default function MetaMetrics({
 
   const metaDailyData = dailyPerformance
     .filter((d) => d.meta_spend && d.meta_spend > 0)
-    .map((d) => ({
-      date: d.date,
-      spend: d.meta_spend || 0,
-      revenue: d.meta_revenue || 0,
-    }));
+    .map((d) => ({ date: d.date, spend: d.meta_spend || 0, revenue: d.meta_revenue || 0 }));
 
   return (
-    <div className="space-y-4">
-      <h2 className="section-header section-header-meta text-lg font-bold text-gray-900">
-        Meta Metrics
-      </h2>
+    <div className="space-y-5">
+      {/* Section Header */}
+      <div>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="section-number">2</div>
+          <h2 className="text-2xl font-bold text-gray-900">Meta Ads Performance</h2>
+        </div>
+        {accountId && (
+          <div className="ml-11 mb-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              META ADS &middot; ACCOUNT: {accountId}
+            </span>
+          </div>
+        )}
+        <p className="text-sm text-gray-500 ml-11">
+          All active campaigns — ranked by spend. Revenue = Meta-attributed conversion value.
+        </p>
+      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div key={card.label} className="metric-card bg-white rounded-2xl p-4 border border-border-light shadow-card">
-              <div className="flex items-center gap-1.5 mb-2">
-                <div className={`p-1 rounded-md ${card.bg}`}>
-                  <Icon className={`w-3 h-3 ${card.color}`} />
-                </div>
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{card.label}</span>
-              </div>
-              <p className="text-lg font-bold text-gray-900 metric-value">{card.value}</p>
-            </div>
-          );
-        })}
+      {/* Row 1 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {row1.map((card) => (
+          <div key={card.label} className={`metric-card ${card.color} p-5 shadow-card`}>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">{card.label}</p>
+            <p className="text-3xl font-bold text-gray-900 metric-value">{card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Row 2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {row2.map((card) => (
+          <div key={card.label} className={`metric-card ${card.color} p-5 shadow-card`}>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">{card.label}</p>
+            <p className="text-3xl font-bold text-gray-900 metric-value">{card.value}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Daily Meta Chart */}
+        {/* Daily Chart */}
         {metaDailyData.length > 0 && (
-          <div className="bg-white rounded-2xl border border-border-light p-5 shadow-card">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">Daily Meta Spend vs Revenue</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={metaDailyData}>
@@ -152,35 +169,38 @@ export default function MetaMetrics({
 
         {/* Campaign Table */}
         {metaCampaigns.length > 0 && (
-          <div className="bg-white rounded-2xl border border-border-light p-5 shadow-card">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">Top Meta Campaigns</h3>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
               <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border-light">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Campaign</th>
                     <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Spend</th>
                     <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Revenue</th>
                     <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">ROAS</th>
-                    <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CPC</th>
-                    <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CTR</th>
+                    <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CPA</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {metaCampaigns.slice(0, 10).map((c) => (
-                    <tr key={c.id} className="border-b border-border-light/50 hover:bg-surface-tertiary transition-colors">
-                      <td className="py-2.5 px-2 font-medium text-gray-800 max-w-[180px] truncate">{c.name}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">{formatCurrency(c.spend)}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">{formatCurrency(c.revenue)}</td>
-                      <td className="text-right py-2.5 px-2">
-                        <span className={`font-semibold ${c.roas >= 2 ? "text-emerald-600" : c.roas >= 1 ? "text-amber-600" : "text-red-500"}`}>
-                          {c.roas.toFixed(2)}x
-                        </span>
-                      </td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">₹{c.cpc.toFixed(2)}</td>
-                      <td className="text-right py-2.5 px-2 text-gray-600">{c.ctr.toFixed(2)}%</td>
-                    </tr>
-                  ))}
+                  {metaCampaigns
+                    .sort((a, b) => b.spend - a.spend)
+                    .slice(0, 15)
+                    .map((c) => (
+                      <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-2.5 px-2 font-medium text-gray-800 max-w-[200px] truncate">{c.name}</td>
+                        <td className="text-right py-2.5 px-2 text-gray-600">{fmt(c.spend)}</td>
+                        <td className="text-right py-2.5 px-2 text-gray-600">{fmt(c.revenue)}</td>
+                        <td className="text-right py-2.5 px-2">
+                          <span className={`font-semibold ${c.roas >= 2 ? "text-emerald-600" : c.roas >= 1 ? "text-amber-600" : "text-red-500"}`}>
+                            {c.roas.toFixed(2)}x
+                          </span>
+                        </td>
+                        <td className="text-right py-2.5 px-2 text-gray-600">
+                          {c.conversions > 0 ? fmt(c.spend / c.conversions) : "—"}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -188,29 +208,63 @@ export default function MetaMetrics({
         )}
       </div>
 
-      {/* Impressions & Clicks summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-4 border border-blue-100">
-          <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Impressions</p>
-          <p className="text-lg font-bold text-gray-900">{formatNumber(channelData.impressions)}</p>
+      {/* Creative Analytics Section */}
+      {metaCampaigns.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-sm font-semibold text-gray-700">Creative Analytics</h3>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">By Ad</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Ad / Creative</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Spend</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Impressions</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Clicks</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CTR</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CPC</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">Conv.</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">CPA</th>
+                  <th className="text-right py-2 px-2 font-semibold text-gray-400 uppercase tracking-wider">ROAS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metaCampaigns
+                  .sort((a, b) => b.spend - a.spend)
+                  .slice(0, 20)
+                  .map((c, i) => (
+                    <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-2.5 px-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-[9px] font-bold text-blue-600 shrink-0">
+                            {i + 1}
+                          </div>
+                          <span className="font-medium text-gray-800 max-w-[220px] truncate">{c.name}</span>
+                        </div>
+                      </td>
+                      <td className="text-right py-2.5 px-2 text-gray-600 font-medium">{fmt(c.spend)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{fmtNum(c.impressions)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{fmtNum(c.clicks)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">{c.ctr.toFixed(2)}%</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">₹{c.cpc.toFixed(2)}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-700 font-medium">{c.conversions.toLocaleString()}</td>
+                      <td className="text-right py-2.5 px-2 text-gray-600">
+                        {c.conversions > 0 ? fmt(c.spend / c.conversions) : "—"}
+                      </td>
+                      <td className="text-right py-2.5 px-2">
+                        <span className={`font-semibold ${c.roas >= 2 ? "text-emerald-600" : c.roas >= 1 ? "text-amber-600" : "text-red-500"}`}>
+                          {c.roas.toFixed(2)}x
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-4 border border-blue-100">
-          <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Clicks</p>
-          <p className="text-lg font-bold text-gray-900">{formatNumber(channelData.clicks)}</p>
-        </div>
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-4 border border-blue-100">
-          <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Conversions</p>
-          <p className="text-lg font-bold text-gray-900">{formatNumber(channelData.conversions)}</p>
-        </div>
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-4 border border-blue-100">
-          <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Frequency</p>
-          <p className="text-lg font-bold text-gray-900">
-            {channelData.impressions > 0 && channelData.clicks > 0
-              ? (channelData.impressions / (channelData.impressions / (channelData.clicks / channelData.ctr * 100))).toFixed(1)
-              : "—"}
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
