@@ -40,33 +40,49 @@ export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [isDemoData, setIsDemoData] = useState(false);
 
+  const [apiErrors, setApiErrors] = useState<string[]>([]);
+
   const fetchData = useCallback(async () => {
     if (!activeClientSpace) return;
     setLoading(true);
+    setApiErrors([]);
     try {
-      const params = new URLSearchParams({
-        start_date: format(dateRange.from, "yyyy-MM-dd"),
-        end_date: format(dateRange.to, "yyyy-MM-dd"),
-      });
+      const hasCredentials =
+        activeClientSpace.metaCredentials ||
+        activeClientSpace.googleCredentials ||
+        activeClientSpace.shopifyCredentials;
 
-      if (activeClientSpace.metaAccountId) {
-        params.set("meta_account_id", activeClientSpace.metaAccountId);
+      let data;
+      if (hasCredentials) {
+        // POST with direct API credentials
+        const response = await fetch("/api/windsor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startDate: format(dateRange.from, "yyyy-MM-dd"),
+            endDate: format(dateRange.to, "yyyy-MM-dd"),
+            metaCredentials: activeClientSpace.metaCredentials,
+            googleCredentials: activeClientSpace.googleCredentials,
+            shopifyCredentials: activeClientSpace.shopifyCredentials,
+          }),
+        });
+        data = await response.json();
+      } else {
+        // GET demo data
+        const params = new URLSearchParams({
+          start_date: format(dateRange.from, "yyyy-MM-dd"),
+          end_date: format(dateRange.to, "yyyy-MM-dd"),
+        });
+        const response = await fetch(`/api/windsor?${params.toString()}`);
+        data = await response.json();
       }
-      if (activeClientSpace.googleAccountId) {
-        params.set("google_account_id", activeClientSpace.googleAccountId);
-      }
-      if (activeClientSpace.shopifyAccountId) {
-        params.set("shopify_account_id", activeClientSpace.shopifyAccountId);
-      }
-
-      const response = await fetch(`/api/windsor?${params.toString()}`);
-      const data = await response.json();
 
       setKpis(data.kpis);
       setChannelBreakdown(data.channelBreakdown);
       setDailyPerformance(data.dailyPerformance);
       setCampaigns(data.campaigns);
       setIsDemoData(!!data.demo);
+      if (data.errors) setApiErrors(data.errors);
     } catch {
       setIsDemoData(true);
     } finally {
@@ -148,8 +164,19 @@ export default function DashboardPage() {
         <main className="p-6 space-y-6">
           {isDemoData && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-              Showing demo data. Windsor.ai API connection may be loading or
-              unavailable.
+              Showing demo data. Connect your ad platform APIs in client space
+              settings for live data.
+            </div>
+          )}
+
+          {apiErrors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+              <p className="font-medium mb-1">Some API calls had errors:</p>
+              <ul className="list-disc list-inside text-xs space-y-0.5">
+                {apiErrors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
             </div>
           )}
 

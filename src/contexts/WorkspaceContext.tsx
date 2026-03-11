@@ -1,21 +1,20 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { ClientSpace, Channel } from "@/types";
+import { ClientSpace, Channel, MetaCredentials, GoogleAdsCredentials, ShopifyCredentials } from "@/types";
+
+interface CreateClientSpaceData {
+  name: string;
+  metaCredentials?: MetaCredentials;
+  googleCredentials?: GoogleAdsCredentials;
+  shopifyCredentials?: ShopifyCredentials;
+}
 
 interface WorkspaceContextType {
   clientSpaces: ClientSpace[];
   activeClientSpace: ClientSpace | null;
   setActiveClientSpace: (id: string) => void;
-  createClientSpace: (data: {
-    name: string;
-    metaAccountId?: string;
-    metaAccountName?: string;
-    googleAccountId?: string;
-    googleAccountName?: string;
-    shopifyAccountId?: string;
-    shopifyAccountName?: string;
-  }) => ClientSpace;
+  createClientSpace: (data: CreateClientSpaceData) => ClientSpace;
   deleteClientSpace: (id: string) => void;
   updateClientSpace: (id: string, data: Partial<ClientSpace>) => void;
 }
@@ -73,29 +72,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const createClientSpace = useCallback(
-    (data: {
-      name: string;
-      metaAccountId?: string;
-      metaAccountName?: string;
-      googleAccountId?: string;
-      googleAccountName?: string;
-      shopifyAccountId?: string;
-      shopifyAccountName?: string;
-    }): ClientSpace => {
+    (data: CreateClientSpaceData): ClientSpace => {
       const connectedChannels: Channel[] = [];
-      if (data.metaAccountId) connectedChannels.push("meta");
-      if (data.googleAccountId) connectedChannels.push("google");
-      if (data.shopifyAccountId) connectedChannels.push("shopify");
+      if (data.metaCredentials) connectedChannels.push("meta");
+      if (data.googleCredentials) connectedChannels.push("google");
+      if (data.shopifyCredentials) connectedChannels.push("shopify");
 
       const newSpace: ClientSpace = {
         id: crypto.randomUUID(),
         name: data.name,
-        metaAccountId: data.metaAccountId,
-        metaAccountName: data.metaAccountName,
-        googleAccountId: data.googleAccountId,
-        googleAccountName: data.googleAccountName,
-        shopifyAccountId: data.shopifyAccountId,
-        shopifyAccountName: data.shopifyAccountName,
+        metaCredentials: data.metaCredentials,
+        googleCredentials: data.googleCredentials,
+        shopifyCredentials: data.shopifyCredentials,
         connectedChannels,
         createdAt: new Date().toISOString(),
       };

@@ -1,193 +1,259 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useRouter } from "next/navigation";
-import { WindsorAccount } from "@/types";
+import { MetaCredentials, GoogleAdsCredentials, ShopifyCredentials } from "@/types";
 import {
   Users,
   ArrowLeft,
   CheckCircle2,
   Loader2,
   AlertCircle,
-  Search,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 
-const channelColors: Record<string, string> = {
-  meta: "#1877F2",
-  google: "#4285F4",
-  shopify: "#96BF48",
-};
+const channelConfig = [
+  {
+    key: "meta" as const,
+    label: "Meta Ads",
+    description: "Facebook & Instagram advertising",
+    color: "#1877F2",
+  },
+  {
+    key: "google" as const,
+    label: "Google Ads",
+    description: "Search, Display, Shopping & Performance Max",
+    color: "#4285F4",
+  },
+  {
+    key: "shopify" as const,
+    label: "Shopify",
+    description: "E-commerce store orders & revenue",
+    color: "#96BF48",
+  },
+];
 
-const channelLabels: Record<string, string> = {
-  meta: "Meta Ads",
-  google: "Google Ads",
-  shopify: "Shopify",
-};
+type VerifyStatus = "idle" | "verifying" | "success" | "error";
 
 export default function NewClientSpacePage() {
   const { createClientSpace } = useWorkspace();
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [accounts, setAccounts] = useState<WindsorAccount[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
-  const [accountError, setAccountError] = useState("");
 
-  const [selectedMeta, setSelectedMeta] = useState<WindsorAccount | null>(null);
-  const [selectedGoogle, setSelectedGoogle] = useState<WindsorAccount | null>(null);
-  const [selectedShopify, setSelectedShopify] = useState<WindsorAccount | null>(null);
+  // Expandable sections
+  const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
 
-  const [searchMeta, setSearchMeta] = useState("");
-  const [searchGoogle, setSearchGoogle] = useState("");
-  const [searchShopify, setSearchShopify] = useState("");
+  // Meta credentials
+  const [metaAccessToken, setMetaAccessToken] = useState("");
+  const [metaAdAccountId, setMetaAdAccountId] = useState("");
+  const [metaVerifyStatus, setMetaVerifyStatus] = useState<VerifyStatus>("idle");
+  const [metaAccountName, setMetaAccountName] = useState("");
+  const [metaError, setMetaError] = useState("");
 
-  // Fetch available accounts from Windsor
-  useEffect(() => {
-    async function loadAccounts() {
-      setLoadingAccounts(true);
-      setAccountError("");
-      try {
-        const response = await fetch("/api/windsor?action=accounts");
-        const data = await response.json();
-        if (data.accounts && Array.isArray(data.accounts)) {
-          setAccounts(data.accounts);
-        } else {
-          setAccountError("No accounts found");
-        }
-      } catch {
-        setAccountError("Failed to load accounts from Windsor.ai");
-      } finally {
-        setLoadingAccounts(false);
+  // Google Ads credentials
+  const [googleDeveloperToken, setGoogleDeveloperToken] = useState("");
+  const [googleClientId, setGoogleClientId] = useState("");
+  const [googleClientSecret, setGoogleClientSecret] = useState("");
+  const [googleRefreshToken, setGoogleRefreshToken] = useState("");
+  const [googleCustomerId, setGoogleCustomerId] = useState("");
+  const [googleVerifyStatus, setGoogleVerifyStatus] = useState<VerifyStatus>("idle");
+  const [googleAccountName, setGoogleAccountName] = useState("");
+  const [googleError, setGoogleError] = useState("");
+
+  // Shopify credentials
+  const [shopifyStoreUrl, setShopifyStoreUrl] = useState("");
+  const [shopifyAccessToken, setShopifyAccessToken] = useState("");
+  const [shopifyVerifyStatus, setShopifyVerifyStatus] = useState<VerifyStatus>("idle");
+  const [shopifyShopName, setShopifyShopName] = useState("");
+  const [shopifyError, setShopifyError] = useState("");
+
+  // Show/hide password fields
+  const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
+
+  const toggleToken = (key: string) =>
+    setShowTokens((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const toggleChannel = (key: string) =>
+    setExpandedChannel((prev) => (prev === key ? null : key));
+
+  // Verify Meta credentials
+  const verifyMeta = async () => {
+    if (!metaAccessToken || !metaAdAccountId) return;
+    setMetaVerifyStatus("verifying");
+    setMetaError("");
+    try {
+      const response = await fetch("/api/windsor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify_meta",
+          metaCredentials: {
+            accessToken: metaAccessToken,
+            adAccountId: metaAdAccountId,
+          },
+        }),
+      });
+      const data = await response.json();
+      if (data.valid) {
+        setMetaVerifyStatus("success");
+        setMetaAccountName(data.accountName || metaAdAccountId);
+      } else {
+        setMetaVerifyStatus("error");
+        setMetaError(data.error || "Verification failed");
       }
+    } catch {
+      setMetaVerifyStatus("error");
+      setMetaError("Network error");
     }
-    loadAccounts();
-  }, []);
+  };
 
-  const metaAccounts = accounts.filter((a) => a.channel === "meta");
-  const googleAccounts = accounts.filter((a) => a.channel === "google");
-  const shopifyAccounts = accounts.filter((a) => a.channel === "shopify");
+  // Verify Google Ads credentials
+  const verifyGoogle = async () => {
+    if (!googleDeveloperToken || !googleClientId || !googleClientSecret || !googleRefreshToken || !googleCustomerId) return;
+    setGoogleVerifyStatus("verifying");
+    setGoogleError("");
+    try {
+      const response = await fetch("/api/windsor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify_google",
+          googleCredentials: {
+            developerToken: googleDeveloperToken,
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            refreshToken: googleRefreshToken,
+            customerId: googleCustomerId,
+          },
+        }),
+      });
+      const data = await response.json();
+      if (data.valid) {
+        setGoogleVerifyStatus("success");
+        setGoogleAccountName(data.accountName || googleCustomerId);
+      } else {
+        setGoogleVerifyStatus("error");
+        setGoogleError(data.error || "Verification failed");
+      }
+    } catch {
+      setGoogleVerifyStatus("error");
+      setGoogleError("Network error");
+    }
+  };
 
-  const filteredMeta = metaAccounts.filter((a) =>
-    a.name.toLowerCase().includes(searchMeta.toLowerCase())
-  );
-  const filteredGoogle = googleAccounts.filter((a) =>
-    a.name.toLowerCase().includes(searchGoogle.toLowerCase())
-  );
-  const filteredShopify = shopifyAccounts.filter((a) =>
-    a.name.toLowerCase().includes(searchShopify.toLowerCase())
-  );
+  // Verify Shopify credentials
+  const verifyShopify = async () => {
+    if (!shopifyStoreUrl || !shopifyAccessToken) return;
+    setShopifyVerifyStatus("verifying");
+    setShopifyError("");
+    try {
+      const response = await fetch("/api/windsor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify_shopify",
+          shopifyCredentials: {
+            storeUrl: shopifyStoreUrl,
+            accessToken: shopifyAccessToken,
+          },
+        }),
+      });
+      const data = await response.json();
+      if (data.valid) {
+        setShopifyVerifyStatus("success");
+        setShopifyShopName(data.shopName || shopifyStoreUrl);
+      } else {
+        setShopifyVerifyStatus("error");
+        setShopifyError(data.error || "Verification failed");
+      }
+    } catch {
+      setShopifyVerifyStatus("error");
+      setShopifyError("Network error");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    let metaCredentials: MetaCredentials | undefined;
+    let googleCredentials: GoogleAdsCredentials | undefined;
+    let shopifyCredentials: ShopifyCredentials | undefined;
+
+    if (metaAccessToken && metaAdAccountId) {
+      metaCredentials = {
+        accessToken: metaAccessToken,
+        adAccountId: metaAdAccountId,
+      };
+    }
+
+    if (googleDeveloperToken && googleClientId && googleClientSecret && googleRefreshToken && googleCustomerId) {
+      googleCredentials = {
+        developerToken: googleDeveloperToken,
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        refreshToken: googleRefreshToken,
+        customerId: googleCustomerId.replace(/-/g, ""),
+      };
+    }
+
+    if (shopifyStoreUrl && shopifyAccessToken) {
+      shopifyCredentials = {
+        storeUrl: shopifyStoreUrl,
+        accessToken: shopifyAccessToken,
+      };
+    }
+
     createClientSpace({
       name: name.trim(),
-      metaAccountId: selectedMeta?.id,
-      metaAccountName: selectedMeta?.name,
-      googleAccountId: selectedGoogle?.id,
-      googleAccountName: selectedGoogle?.name,
-      shopifyAccountId: selectedShopify?.id,
-      shopifyAccountName: selectedShopify?.name,
+      metaCredentials,
+      googleCredentials,
+      shopifyCredentials,
     });
 
     router.push("/");
   };
 
-  const renderAccountSelector = (
-    label: string,
-    channel: string,
-    accountList: WindsorAccount[],
-    selected: WindsorAccount | null,
-    setSelected: (a: WindsorAccount | null) => void,
-    search: string,
-    setSearch: (s: string) => void
-  ) => {
-    const color = channelColors[channel];
-
-    return (
-      <div className="border border-gray-200 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs"
-            style={{ backgroundColor: color }}
-          >
-            {label.charAt(0)}
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
-            <p className="text-xs text-gray-500">
-              {accountList.length} account{accountList.length !== 1 ? "s" : ""}{" "}
-              available
-            </p>
-          </div>
+  const renderVerifyBadge = (status: VerifyStatus, accountName: string, error: string) => {
+    if (status === "verifying") {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Verifying...
         </div>
-
-        {selected ? (
-          <div className="flex items-center justify-between bg-primary-50 border border-primary-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-primary-600" />
-              <span className="text-sm font-medium text-primary-700">
-                {selected.name}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="text-xs text-primary-600 hover:text-primary-800 font-medium"
-            >
-              Change
-            </button>
-          </div>
-        ) : accountList.length === 0 ? (
-          <div className="text-sm text-gray-400 italic py-2">
-            No {label.toLowerCase()} accounts found in Windsor
-          </div>
-        ) : (
-          <div>
-            {accountList.length > 3 && (
-              <div className="relative mb-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search accounts..."
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none"
-                />
-              </div>
-            )}
-            <div className="max-h-40 overflow-y-auto space-y-1">
-              {(accountList.length > 3
-                ? accountList.filter((a) =>
-                    a.name.toLowerCase().includes(search.toLowerCase())
-                  )
-                : accountList
-              ).map((account) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => setSelected(account)}
-                  className="w-full text-left p-2.5 rounded-lg text-sm hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-colors flex items-center justify-between group"
-                >
-                  <span className="text-gray-700 truncate">{account.name}</span>
-                  <span className="text-xs text-gray-400 group-hover:text-primary-600 shrink-0 ml-2">
-                    Select
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+      );
+    }
+    if (status === "success") {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-green-600 mt-2">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Connected: {accountName}
+        </div>
+      );
+    }
+    if (status === "error") {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-red-500 mt-2">
+          <AlertCircle className="w-3.5 h-3.5" />
+          {error}
+        </div>
+      );
+    }
+    return null;
   };
+
+  const inputClass =
+    "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none";
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-xl">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6"
@@ -206,13 +272,13 @@ export default function NewClientSpacePage() {
                 New Client Space
               </h1>
               <p className="text-sm text-gray-500">
-                Set up a new client within Neuroid
+                Connect ad accounts directly via their APIs
               </p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Client Space Name */}
+            {/* Client Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Client Name
@@ -221,75 +287,317 @@ export default function NewClientSpacePage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Acme Corporation"
+                placeholder="e.g., Jewelsmars"
                 required
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                className={inputClass}
               />
             </div>
 
-            {/* Account Selection */}
+            {/* Platform Connections */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Connect Ad Accounts
+                Connect Platforms
               </label>
               <p className="text-xs text-gray-500 mb-3">
-                Select the specific accounts for this client from your Windsor.ai
-                connections
+                Add API credentials for each platform you want to pull data from.
+                Skip any platform to use demo data for it.
               </p>
 
-              {loadingAccounts ? (
-                <div className="flex items-center justify-center py-8 text-gray-400">
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Loading available accounts from Windsor.ai...
-                </div>
-              ) : accountError && accounts.length === 0 ? (
-                <div className="flex items-center gap-2 text-amber-600 text-sm bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <div>
-                    <p className="font-medium">{accountError}</p>
-                    <p className="text-xs text-amber-500 mt-0.5">
-                      You can still create the client space -- it will use demo
-                      data
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {renderAccountSelector(
-                    "Meta Ads",
-                    "meta",
-                    filteredMeta.length > 0 || searchMeta
-                      ? filteredMeta
-                      : metaAccounts,
-                    selectedMeta,
-                    setSelectedMeta,
-                    searchMeta,
-                    setSearchMeta
+              <div className="space-y-3">
+                {/* META ADS */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleChannel("meta")}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                        style={{ backgroundColor: channelConfig[0].color }}
+                      >
+                        M
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {channelConfig[0].label}
+                          {metaVerifyStatus === "success" && (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 inline ml-2" />
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {channelConfig[0].description}
+                        </p>
+                      </div>
+                    </div>
+                    {expandedChannel === "meta" ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+
+                  {expandedChannel === "meta" && (
+                    <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Access Token
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showTokens["metaToken"] ? "text" : "password"}
+                            value={metaAccessToken}
+                            onChange={(e) => setMetaAccessToken(e.target.value)}
+                            placeholder="EAAxxxxxxx..."
+                            className={inputClass + " pr-10"}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleToken("metaToken")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          >
+                            {showTokens["metaToken"] ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Ad Account ID
+                        </label>
+                        <input
+                          type="text"
+                          value={metaAdAccountId}
+                          onChange={(e) => setMetaAdAccountId(e.target.value)}
+                          placeholder="act_123456789"
+                          className={inputClass}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={verifyMeta}
+                        disabled={!metaAccessToken || !metaAdAccountId || metaVerifyStatus === "verifying"}
+                        className="px-4 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                      >
+                        Verify Connection
+                      </button>
+                      {renderVerifyBadge(metaVerifyStatus, metaAccountName, metaError)}
+                    </div>
                   )}
-                  {renderAccountSelector(
-                    "Google Ads",
-                    "google",
-                    filteredGoogle.length > 0 || searchGoogle
-                      ? filteredGoogle
-                      : googleAccounts,
-                    selectedGoogle,
-                    setSelectedGoogle,
-                    searchGoogle,
-                    setSearchGoogle
-                  )}
-                  {renderAccountSelector(
-                    "Shopify",
-                    "shopify",
-                    filteredShopify.length > 0 || searchShopify
-                      ? filteredShopify
-                      : shopifyAccounts,
-                    selectedShopify,
-                    setSelectedShopify,
-                    searchShopify,
-                    setSearchShopify
+                </div>
+
+                {/* GOOGLE ADS */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleChannel("google")}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                        style={{ backgroundColor: channelConfig[1].color }}
+                      >
+                        G
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {channelConfig[1].label}
+                          {googleVerifyStatus === "success" && (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 inline ml-2" />
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {channelConfig[1].description}
+                        </p>
+                      </div>
+                    </div>
+                    {expandedChannel === "google" ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+
+                  {expandedChannel === "google" && (
+                    <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Developer Token
+                        </label>
+                        <input
+                          type={showTokens["googleDev"] ? "text" : "password"}
+                          value={googleDeveloperToken}
+                          onChange={(e) => setGoogleDeveloperToken(e.target.value)}
+                          placeholder="Developer token from Google Ads"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            OAuth Client ID
+                          </label>
+                          <input
+                            type="text"
+                            value={googleClientId}
+                            onChange={(e) => setGoogleClientId(e.target.value)}
+                            placeholder="xxxxx.apps.googleusercontent.com"
+                            className={inputClass}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            OAuth Client Secret
+                          </label>
+                          <input
+                            type={showTokens["googleSecret"] ? "text" : "password"}
+                            value={googleClientSecret}
+                            onChange={(e) => setGoogleClientSecret(e.target.value)}
+                            placeholder="Client secret"
+                            className={inputClass}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Refresh Token
+                        </label>
+                        <input
+                          type={showTokens["googleRefresh"] ? "text" : "password"}
+                          value={googleRefreshToken}
+                          onChange={(e) => setGoogleRefreshToken(e.target.value)}
+                          placeholder="OAuth refresh token"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Customer ID
+                        </label>
+                        <input
+                          type="text"
+                          value={googleCustomerId}
+                          onChange={(e) => setGoogleCustomerId(e.target.value)}
+                          placeholder="123-456-7890"
+                          className={inputClass}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={verifyGoogle}
+                        disabled={
+                          !googleDeveloperToken ||
+                          !googleClientId ||
+                          !googleClientSecret ||
+                          !googleRefreshToken ||
+                          !googleCustomerId ||
+                          googleVerifyStatus === "verifying"
+                        }
+                        className="px-4 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                      >
+                        Verify Connection
+                      </button>
+                      {renderVerifyBadge(googleVerifyStatus, googleAccountName, googleError)}
+                    </div>
                   )}
                 </div>
-              )}
+
+                {/* SHOPIFY */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleChannel("shopify")}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                        style={{ backgroundColor: channelConfig[2].color }}
+                      >
+                        S
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {channelConfig[2].label}
+                          {shopifyVerifyStatus === "success" && (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 inline ml-2" />
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {channelConfig[2].description}
+                        </p>
+                      </div>
+                    </div>
+                    {expandedChannel === "shopify" ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+
+                  {expandedChannel === "shopify" && (
+                    <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Store URL
+                        </label>
+                        <input
+                          type="text"
+                          value={shopifyStoreUrl}
+                          onChange={(e) => setShopifyStoreUrl(e.target.value)}
+                          placeholder="mystore.myshopify.com"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Admin API Access Token
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showTokens["shopifyToken"] ? "text" : "password"}
+                            value={shopifyAccessToken}
+                            onChange={(e) => setShopifyAccessToken(e.target.value)}
+                            placeholder="shpat_xxxxx..."
+                            className={inputClass + " pr-10"}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleToken("shopifyToken")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          >
+                            {showTokens["shopifyToken"] ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={verifyShopify}
+                        disabled={!shopifyStoreUrl || !shopifyAccessToken || shopifyVerifyStatus === "verifying"}
+                        className="px-4 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 disabled:opacity-50 transition-colors"
+                      >
+                        Verify Connection
+                      </button>
+                      {renderVerifyBadge(shopifyVerifyStatus, shopifyShopName, shopifyError)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Info note */}
+            <div className="bg-gray-50 rounded-lg px-4 py-3 text-xs text-gray-500">
+              Credentials are stored locally in your browser. Platforms without
+              credentials will show demo data. You can always update connections
+              later in Settings.
             </div>
 
             {/* Submit */}
