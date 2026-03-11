@@ -180,10 +180,10 @@ export default function CampaignTable({ data, loading }: CampaignTableProps) {
                   </span>
                 </td>
                 <td className="py-3 px-3 text-right text-gray-700">
-                  ${row.spend.toFixed(2)}
+                  ₹{row.spend.toFixed(2)}
                 </td>
                 <td className="py-3 px-3 text-right text-gray-700">
-                  ${row.revenue.toFixed(2)}
+                  ₹{row.revenue.toFixed(2)}
                 </td>
                 <td className="py-3 px-3 text-right">
                   <span
@@ -205,7 +205,7 @@ export default function CampaignTable({ data, loading }: CampaignTableProps) {
                   {row.clicks.toLocaleString()}
                 </td>
                 <td className="py-3 px-3 text-right text-gray-700">
-                  ${row.cpc.toFixed(2)}
+                  ₹{row.cpc.toFixed(2)}
                 </td>
                 <td className="py-3 px-3 text-right text-gray-700">
                   {row.ctr.toFixed(2)}%

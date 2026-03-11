@@ -86,7 +86,7 @@ export default function ChannelBreakdown({
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value) => [`$${Number(value).toFixed(2)}`, "Spend"]}
+                formatter={(value) => [`₹${Number(value).toFixed(2)}`, "Spend"]}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "1px solid #e5e7eb",
@@ -119,7 +119,7 @@ export default function ChannelBreakdown({
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
                 formatter={(value, name) => [
-                  `$${Number(value).toFixed(2)}`,
+                  `₹${Number(value).toFixed(2)}`,
                   String(name),
                 ]}
                 contentStyle={{
@@ -179,10 +179,10 @@ export default function ChannelBreakdown({
                   </div>
                 </td>
                 <td className="text-right py-2.5 px-3 text-gray-700">
-                  ${ch.spend.toFixed(2)}
+                  ₹{ch.spend.toFixed(2)}
                 </td>
                 <td className="text-right py-2.5 px-3 text-gray-700">
-                  ${ch.revenue.toFixed(2)}
+                  ₹{ch.revenue.toFixed(2)}
                 </td>
                 <td className="text-right py-2.5 px-3">
                   <span
@@ -201,7 +201,7 @@ export default function ChannelBreakdown({
                   {ch.conversions.toLocaleString()}
                 </td>
                 <td className="text-right py-2.5 px-3 text-gray-700">
-                  ${ch.cpc.toFixed(2)}
+                  ₹{ch.cpc.toFixed(2)}
                 </td>
               </tr>
             ))}

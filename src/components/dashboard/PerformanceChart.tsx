@@ -147,7 +147,7 @@ export default function PerformanceChart({
               const n = String(name);
               if (n === "roas") return [`${v.toFixed(2)}x`, "ROAS"];
               if (n === "spend" || n === "revenue")
-                return [`$${v.toFixed(2)}`, n.charAt(0).toUpperCase() + n.slice(1)];
+                return [`₹${v.toFixed(2)}`, n.charAt(0).toUpperCase() + n.slice(1)];
               return [v, n.charAt(0).toUpperCase() + n.slice(1)];
             }}
           />

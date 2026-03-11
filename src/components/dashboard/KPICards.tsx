@@ -25,9 +25,10 @@ interface KPICardItem {
 }
 
 function formatCurrency(value: number): string {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
-  return `$${value.toFixed(2)}`;
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+  if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+  if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
+  return `₹${value.toFixed(2)}`;
 }
 
 function formatNumber(value: number): string {
@@ -62,7 +63,7 @@ export default function KPICards({ data, loading }: KPICardsProps) {
         },
         {
           label: "CPC",
-          value: `$${data.cpc.toFixed(2)}`,
+          value: `₹${data.cpc.toFixed(2)}`,
           icon: MousePointerClick,
           color: "text-amber-600",
           bgColor: "bg-amber-50",
