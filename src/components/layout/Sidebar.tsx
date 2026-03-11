@@ -13,6 +13,7 @@ import {
   BarChart3,
   Zap,
   LogOut,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,6 +30,7 @@ export default function Sidebar() {
     { href: "/performance", label: "Performance", icon: BarChart3 },
     { href: "/automation", label: "Automation", icon: Zap },
     { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/api-docs", label: "API Application", icon: FileText },
   ];
 
   return (
