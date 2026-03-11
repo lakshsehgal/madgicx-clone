@@ -17,6 +17,8 @@ export interface GoogleAdsCredentials {
 export interface ShopifyCredentials {
   storeUrl: string; // e.g., mystore.myshopify.com
   accessToken: string;
+  clientId?: string; // Shopify app Client ID (from Partners dashboard)
+  clientSecret?: string; // Shopify app Client Secret
 }
 
 // A client space within the Neuroid workspace

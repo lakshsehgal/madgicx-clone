@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Shopify OAuth callback — exchanges code for permanent access token
+// Reads client credentials from HTTP-only cookie set during initiation
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const shop = request.nextUrl.searchParams.get("shop");
@@ -12,8 +13,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const apiKey = process.env.SHOPIFY_API_KEY!;
-  const apiSecret = process.env.SHOPIFY_API_SECRET!;
+  // Read client credentials from cookie (set during OAuth initiation)
+  const credsCookie = request.cookies.get("shopify_oauth_creds")?.value;
+  let clientId = process.env.SHOPIFY_API_KEY || "";
+  let clientSecret = process.env.SHOPIFY_API_SECRET || "";
+
+  if (credsCookie) {
+    try {
+      const parsed = JSON.parse(credsCookie);
+      clientId = parsed.clientId || clientId;
+      clientSecret = parsed.clientSecret || clientSecret;
+    } catch {
+      // Fall back to env vars
+    }
+  }
+
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(
+      `${appUrl}/integrations?error=${encodeURIComponent("Missing client credentials. Please re-enter your Client ID and Secret.")}&platform=shopify`
+    );
+  }
 
   try {
     // Exchange code for permanent access token
@@ -23,8 +42,8 @@ export async function GET(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_id: apiKey,
-          client_secret: apiSecret,
+          client_id: clientId,
+          client_secret: clientSecret,
           code,
         }),
       }
@@ -51,6 +70,8 @@ export async function GET(request: NextRequest) {
     const payload = {
       platform: "shopify",
       accessToken,
+      clientId,
+      clientSecret,
       storeUrl: shop,
       shopName: shopInfo.name || shop,
       email: shopInfo.email || "",
@@ -58,9 +79,21 @@ export async function GET(request: NextRequest) {
       domain: shopInfo.domain || shop,
     };
 
-    return NextResponse.redirect(
+    // Redirect back with payload in URL fragment and clear the credentials cookie
+    const response = NextResponse.redirect(
       `${appUrl}/integrations#oauth_result=${encodeURIComponent(JSON.stringify(payload))}`
     );
+
+    // Clear the temporary credentials cookie
+    response.cookies.set("shopify_oauth_creds", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/api/auth/shopify",
+      maxAge: 0,
+    });
+
+    return response;
   } catch (err) {
     return NextResponse.redirect(
       `${appUrl}/integrations?error=${encodeURIComponent(String(err))}&platform=shopify`
