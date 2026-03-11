@@ -4,6 +4,7 @@ import {
   CampaignRow,
   KPIData,
   Channel,
+  WindsorAccount,
 } from "@/types";
 import { format } from "date-fns";
 
@@ -13,26 +14,96 @@ interface WindsorOptions {
   apiKey: string;
   startDate: Date;
   endDate: Date;
+  metaAccountId?: string;
+  googleAccountId?: string;
+  shopifyAccountId?: string;
 }
 
 async function fetchWindsorData(
-  options: WindsorOptions,
+  apiKey: string,
   connector: string,
-  fields: string[]
+  fields: string[],
+  dateFrom: string,
+  dateTo: string,
+  accountId?: string
 ) {
   const params = new URLSearchParams({
-    api_key: options.apiKey,
-    date_from: format(options.startDate, "yyyy-MM-dd"),
-    date_to: format(options.endDate, "yyyy-MM-dd"),
+    api_key: apiKey,
+    date_from: dateFrom,
+    date_to: dateTo,
     _connector: connector,
     _fields: fields.join(","),
   });
+
+  if (accountId) {
+    params.set("account_id", accountId);
+  }
 
   const response = await fetch(`${WINDSOR_BASE_URL}?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`Windsor API error: ${response.statusText}`);
   }
   return response.json();
+}
+
+// Fetch available accounts/connections from Windsor
+export async function fetchWindsorAccounts(
+  apiKey: string
+): Promise<WindsorAccount[]> {
+  const accounts: WindsorAccount[] = [];
+
+  // Fetch accounts for each connector type
+  const connectors = [
+    { connector: "facebook", channel: "meta" as Channel },
+    { connector: "google_ads", channel: "google" as Channel },
+    { connector: "shopify", channel: "shopify" as Channel },
+  ];
+
+  const results = await Promise.allSettled(
+    connectors.map(async ({ connector, channel }) => {
+      const params = new URLSearchParams({
+        api_key: apiKey,
+        _connector: connector,
+        _fields: "account_name,account_id,datasource",
+        date_from: "2024-01-01",
+        date_to: format(new Date(), "yyyy-MM-dd"),
+      });
+
+      const response = await fetch(
+        `${WINDSOR_BASE_URL}?${params.toString()}`
+      );
+      if (!response.ok) return [];
+      const data = await response.json();
+
+      // Extract unique accounts from the data
+      const seen = new Set<string>();
+      const channelAccounts: WindsorAccount[] = [];
+
+      if (data?.data && Array.isArray(data.data)) {
+        for (const row of data.data) {
+          const id = String(row.account_id || row.datasource || connector);
+          const name = String(
+            row.account_name || row.datasource || connector
+          );
+          const key = `${channel}-${id}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            channelAccounts.push({ id, name, connector, channel });
+          }
+        }
+      }
+
+      return channelAccounts;
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === "fulfilled" && Array.isArray(result.value)) {
+      accounts.push(...result.value);
+    }
+  }
+
+  return accounts;
 }
 
 export async function fetchPerformanceData(
@@ -54,16 +125,35 @@ export async function fetchPerformanceData(
     "date",
   ];
 
+  const dateFrom = format(options.startDate, "yyyy-MM-dd");
+  const dateTo = format(options.endDate, "yyyy-MM-dd");
+
   try {
     const [metaData, googleData, shopifyData] = await Promise.allSettled([
-      fetchWindsorData(options, "facebook", fields),
-      fetchWindsorData(options, "google_ads", fields),
-      fetchWindsorData(options, "shopify", [
-        "source",
-        "revenue",
-        "conversions",
-        "date",
-      ]),
+      fetchWindsorData(
+        options.apiKey,
+        "facebook",
+        fields,
+        dateFrom,
+        dateTo,
+        options.metaAccountId
+      ),
+      fetchWindsorData(
+        options.apiKey,
+        "google_ads",
+        fields,
+        dateFrom,
+        dateTo,
+        options.googleAccountId
+      ),
+      fetchWindsorData(
+        options.apiKey,
+        "shopify",
+        ["source", "revenue", "conversions", "date"],
+        dateFrom,
+        dateTo,
+        options.shopifyAccountId
+      ),
     ]);
 
     const meta =
@@ -75,7 +165,6 @@ export async function fetchPerformanceData(
 
     return processWindsorData(meta, google, shopify);
   } catch {
-    // Return demo data if API fails
     return generateDemoData(options.startDate, options.endDate);
   }
 }
@@ -94,7 +183,13 @@ function processWindsorData(
     data: Record<string, unknown>[],
     channel: Channel
   ): ChannelPerformance => {
-    interface Totals { spend: number; revenue: number; impressions: number; clicks: number; conversions: number; }
+    interface Totals {
+      spend: number;
+      revenue: number;
+      impressions: number;
+      clicks: number;
+      conversions: number;
+    }
     const totals = data.reduce<Totals>(
       (acc, row) => ({
         spend: acc.spend + (Number(row.spend) || 0),

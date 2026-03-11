@@ -2,9 +2,14 @@
 
 import React from "react";
 import Sidebar from "@/components/layout/Sidebar";
+import { useAuth } from "@/contexts/AuthContext";
+import LoginPage from "@/components/auth/LoginPage";
 import { BarChart3 } from "lucide-react";
 
 export default function PerformancePage() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <LoginPage />;
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />

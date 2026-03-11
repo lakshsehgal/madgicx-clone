@@ -1,27 +1,31 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { Workspace, Channel } from "@/types";
+import { ClientSpace, Channel } from "@/types";
 
 interface WorkspaceContextType {
-  workspaces: Workspace[];
-  activeWorkspace: Workspace | null;
-  setActiveWorkspace: (id: string) => void;
-  createWorkspace: (data: {
+  clientSpaces: ClientSpace[];
+  activeClientSpace: ClientSpace | null;
+  setActiveClientSpace: (id: string) => void;
+  createClientSpace: (data: {
     name: string;
-    clientName: string;
-    windsorApiKey?: string;
-    connectedChannels: Channel[];
-  }) => Workspace;
-  deleteWorkspace: (id: string) => void;
+    metaAccountId?: string;
+    metaAccountName?: string;
+    googleAccountId?: string;
+    googleAccountName?: string;
+    shopifyAccountId?: string;
+    shopifyAccountName?: string;
+  }) => ClientSpace;
+  deleteClientSpace: (id: string) => void;
+  updateClientSpace: (id: string, data: Partial<ClientSpace>) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
-const STORAGE_KEY = "madgicx_workspaces";
-const ACTIVE_KEY = "madgicx_active_workspace";
+const STORAGE_KEY = "neuroid_client_spaces";
+const ACTIVE_KEY = "neuroid_active_client_space";
 
-function loadWorkspaces(): Workspace[] {
+function loadClientSpaces(): ClientSpace[] {
   if (typeof window === "undefined") return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -31,80 +35,110 @@ function loadWorkspaces(): Workspace[] {
   }
 }
 
-function saveWorkspaces(workspaces: Workspace[]) {
+function saveClientSpaces(spaces: ClientSpace[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspaces));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(spaces));
 }
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [activeWorkspace, setActiveState] = useState<Workspace | null>(null);
+  const [clientSpaces, setClientSpaces] = useState<ClientSpace[]>([]);
+  const [activeClientSpace, setActiveState] = useState<ClientSpace | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const ws = loadWorkspaces();
-    setWorkspaces(ws);
+    const spaces = loadClientSpaces();
+    setClientSpaces(spaces);
 
     const activeId = localStorage.getItem(ACTIVE_KEY);
     if (activeId) {
-      const active = ws.find((w) => w.id === activeId);
+      const active = spaces.find((s) => s.id === activeId);
       if (active) setActiveState(active);
     }
     setLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (loaded) saveWorkspaces(workspaces);
-  }, [workspaces, loaded]);
+    if (loaded) saveClientSpaces(clientSpaces);
+  }, [clientSpaces, loaded]);
 
-  const setActiveWorkspace = useCallback(
+  const setActiveClientSpace = useCallback(
     (id: string) => {
-      const ws = workspaces.find((w) => w.id === id);
-      if (ws) {
-        setActiveState(ws);
+      const space = clientSpaces.find((s) => s.id === id);
+      if (space) {
+        setActiveState(space);
         localStorage.setItem(ACTIVE_KEY, id);
       }
     },
-    [workspaces]
+    [clientSpaces]
   );
 
-  const createWorkspace = useCallback(
+  const createClientSpace = useCallback(
     (data: {
       name: string;
-      clientName: string;
-      windsorApiKey?: string;
-      connectedChannels: Channel[];
-    }): Workspace => {
-      const newWorkspace: Workspace = {
+      metaAccountId?: string;
+      metaAccountName?: string;
+      googleAccountId?: string;
+      googleAccountName?: string;
+      shopifyAccountId?: string;
+      shopifyAccountName?: string;
+    }): ClientSpace => {
+      const connectedChannels: Channel[] = [];
+      if (data.metaAccountId) connectedChannels.push("meta");
+      if (data.googleAccountId) connectedChannels.push("google");
+      if (data.shopifyAccountId) connectedChannels.push("shopify");
+
+      const newSpace: ClientSpace = {
         id: crypto.randomUUID(),
-        ...data,
+        name: data.name,
+        metaAccountId: data.metaAccountId,
+        metaAccountName: data.metaAccountName,
+        googleAccountId: data.googleAccountId,
+        googleAccountName: data.googleAccountName,
+        shopifyAccountId: data.shopifyAccountId,
+        shopifyAccountName: data.shopifyAccountName,
+        connectedChannels,
         createdAt: new Date().toISOString(),
       };
-      setWorkspaces((prev) => {
-        const updated = [...prev, newWorkspace];
-        saveWorkspaces(updated);
+      setClientSpaces((prev) => {
+        const updated = [...prev, newSpace];
+        saveClientSpaces(updated);
         return updated;
       });
-      setActiveState(newWorkspace);
-      localStorage.setItem(ACTIVE_KEY, newWorkspace.id);
-      return newWorkspace;
+      setActiveState(newSpace);
+      localStorage.setItem(ACTIVE_KEY, newSpace.id);
+      return newSpace;
     },
     []
   );
 
-  const deleteWorkspace = useCallback(
+  const deleteClientSpace = useCallback(
     (id: string) => {
-      setWorkspaces((prev) => {
-        const updated = prev.filter((w) => w.id !== id);
-        saveWorkspaces(updated);
+      setClientSpaces((prev) => {
+        const updated = prev.filter((s) => s.id !== id);
+        saveClientSpaces(updated);
         return updated;
       });
-      if (activeWorkspace?.id === id) {
+      if (activeClientSpace?.id === id) {
         setActiveState(null);
         localStorage.removeItem(ACTIVE_KEY);
       }
     },
-    [activeWorkspace]
+    [activeClientSpace]
+  );
+
+  const updateClientSpace = useCallback(
+    (id: string, data: Partial<ClientSpace>) => {
+      setClientSpaces((prev) => {
+        const updated = prev.map((s) => (s.id === id ? { ...s, ...data } : s));
+        saveClientSpaces(updated);
+        if (activeClientSpace?.id === id) {
+          const updatedSpace = updated.find((s) => s.id === id);
+          if (updatedSpace) setActiveState(updatedSpace);
+        }
+        return updated;
+      });
+    },
+    [activeClientSpace]
   );
 
   if (!loaded) return null;
@@ -112,11 +146,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceContext.Provider
       value={{
-        workspaces,
-        activeWorkspace,
-        setActiveWorkspace,
-        createWorkspace,
-        deleteWorkspace,
+        clientSpaces,
+        activeClientSpace,
+        setActiveClientSpace,
+        createClientSpace,
+        deleteClientSpace,
+        updateClientSpace,
       }}
     >
       {children}

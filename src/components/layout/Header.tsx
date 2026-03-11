@@ -26,7 +26,7 @@ export default function Header({
   onRefresh,
   loading,
 }: HeaderProps) {
-  const { activeWorkspace } = useWorkspace();
+  const { activeClientSpace } = useWorkspace();
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   return (
@@ -34,16 +34,15 @@ export default function Header({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {activeWorkspace
-              ? `${activeWorkspace.clientName} Dashboard`
+            {activeClientSpace
+              ? `${activeClientSpace.name} Dashboard`
               : "Marketing Dashboard"}
           </h1>
-          {activeWorkspace && (
+          {activeClientSpace && (
             <p className="text-sm text-gray-500 mt-0.5">
-              Workspace: {activeWorkspace.name} &middot;{" "}
-              {activeWorkspace.connectedChannels
+              {activeClientSpace.connectedChannels
                 .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
-                .join(", ")}
+                .join(", ") || "No accounts connected"}
             </p>
           )}
         </div>
